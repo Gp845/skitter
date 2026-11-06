@@ -14,14 +14,14 @@ from cortex.core.server import create_app  # noqa: E402
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--port", type=int, default=3000)  # 0G sign-in only whitelists 3000/3001/5173
+    ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", 3000)))  # 0G sign-in only whitelists 3000/3001/5173
     ap.add_argument("--world", choices=["arena", "house"], default="house")
     a = ap.parse_args()
     hub = Hub(max_robots=int(os.environ.get("MAX_ROBOTS", 3)), idle_s=float(os.environ.get("ROBOT_IDLE_S", 900)),
               world=a.world)
     print(f"Skitter hub ready: http://localhost:{a.port}  accounts in {hub.dir}  max {hub.max} robots")
     try:
-        uvicorn.run(create_app(None, None, hub=hub), host="127.0.0.1", port=a.port, log_level="warning")
+        uvicorn.run(create_app(None, None, hub=hub), host=os.environ.get("HOST", "127.0.0.1"), port=a.port, log_level="warning")
     finally:
         hub.close()
 
