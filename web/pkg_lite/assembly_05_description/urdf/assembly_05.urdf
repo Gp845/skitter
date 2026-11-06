@@ -1,0 +1,1699 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="assembly_05">
+
+<xacro:include filename="$(find assembly_05_description)/urdf/materials.xacro"/>
+<xacro:include filename="$(find assembly_05_description)/urdf/assembly_05.trans"/>
+<xacro:include filename="$(find assembly_05_description)/urdf/assembly_05.gazebo"/>
+<link name="base_link">
+  <inertial>
+    <origin xyz="-1.7410960314184462e-06 2.398364915514766e-06 0.000827472967320226" rpy="0 0 0"/>
+    <mass value="0.700032866848829"/>
+    <inertia ixx="0.001123" iyy="0.001123" izz="0.002243" ixy="0.0" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__23__1">
+  <inertial>
+    <origin xyz="0.018153709787467595 0.007500074434216361 0.02223015900688945" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.4e-05" iyy="2.2e-05" izz="1.3e-05" ixy="0.0" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.0816 0.0075 -0.003" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__23__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.0816 0.0075 -0.003" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__23__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1_1">
+  <inertial>
+    <origin xyz="0.0025817904318115384 0.01947128401479556 0.02223015900688947" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="2e-05" iyy="1.6e-05" izz="1.3e-05" ixy="-4e-06" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.047295 -0.066918 -0.003" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.047295 -0.066918 -0.003" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__9__1">
+  <inertial>
+    <origin xyz="-0.008071919355656043 -0.0010187904194207537 0.02223015900688947" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="2e-05" iyy="1.6e-05" izz="1.3e-05" ixy="4e-06" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.041805 -0.087408 -0.003" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__9__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.041805 -0.087408 -0.003" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__9__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__8__1">
+  <inertial>
+    <origin xyz="-0.018153709787467623 -0.007500074434216346 0.02223015900688945" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.4e-05" iyy="2.2e-05" izz="1.3e-05" ixy="0.0" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.0816 -0.0075 -0.003" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__8__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.0816 -0.0075 -0.003" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__8__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__13__1">
+  <inertial>
+    <origin xyz="-0.0025817904318115106 -0.019471284014795462 0.022230159006889467" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="2e-05" iyy="1.6e-05" izz="1.3e-05" ixy="-4e-06" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.047295 0.066918 -0.003" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__13__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.047295 0.066918 -0.003" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__13__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__10__1">
+  <inertial>
+    <origin xyz="0.015571919355655939 -0.01197120958057922 0.02223015900688953" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="2e-05" iyy="1.6e-05" izz="1.3e-05" ixy="4e-06" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.034305 0.074418 -0.003" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__10__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.034305 0.074418 -0.003" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__10__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__15__1">
+  <inertial>
+    <origin xyz="0.012143422832249354 0.0009195773213085162 -0.02538756343520418" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="3.1e-05" iyy="3.3e-05" izz="6e-06" ixy="-0.0" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.1091 0.0 -0.0495" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__15__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.1091 0.0 -0.0495" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__15__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__12__1">
+  <inertial>
+    <origin xyz="0.006089095592381369 0.010546994491031914 -0.025387563435203955" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="3.2e-05" iyy="3.1e-05" izz="6e-06" ixy="-1e-06" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.05455 -0.094483 -0.0495" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__12__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.05455 -0.094483 -0.0495" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__12__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__16__1">
+  <inertial>
+    <origin xyz="-0.0060890955923825416 0.010546994491031261 -0.025387563435203986" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="3.2e-05" iyy="3.1e-05" izz="6e-06" ixy="1e-06" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.05455 -0.094483 -0.0495" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__16__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.05455 -0.094483 -0.0495" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__16__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__6__1">
+  <inertial>
+    <origin xyz="-0.012178191184764 -6.514679418530267e-16 -0.02538756343520391" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="3.1e-05" iyy="3.3e-05" izz="6e-06" ixy="-0.0" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.1091 -0.0 -0.0495" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__6__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.1091 -0.0 -0.0495" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__6__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__11__1">
+  <inertial>
+    <origin xyz="-0.006089095592381459 -0.010546994491031858 -0.025387563435203916" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="3.2e-05" iyy="3.1e-05" izz="6e-06" ixy="-1e-06" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.05455 0.094483 -0.0495" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__11__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.05455 0.094483 -0.0495" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__11__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__17__1">
+  <inertial>
+    <origin xyz="0.006089095592382493 -0.01054699449103133 -0.025387563435203948" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="3.2e-05" iyy="3.1e-05" izz="6e-06" ixy="1e-06" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.05455 0.094483 -0.0495" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__17__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.05455 0.094483 -0.0495" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__17__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__13__1">
+  <inertial>
+    <origin xyz="-0.00782180970930571 0.00031243655501982657 -0.006999999990227875" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="3.1e-05" iyy="6e-06" izz="3.3e-05" ixy="0.0" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.1291 -0.0 -0.0308" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__13__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.1291 -0.0 -0.0308" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__13__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__10__1">
+  <inertial>
+    <origin xyz="-0.004181482848370985 -0.006617547262887574 -0.006999999990227868" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="1.2e-05" iyy="2.4e-05" izz="3.3e-05" ixy="1.1e-05" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.06455 0.111804 -0.0308" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__10__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.06455 0.111804 -0.0308" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__10__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__14__1">
+  <inertial>
+    <origin xyz="0.0036403268609347117 -0.006929983817907506 -0.006999999990227882" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="1.2e-05" iyy="2.4e-05" izz="3.3e-05" ixy="-1.1e-05" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.06455 0.111804 -0.0308" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__14__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.06455 0.111804 -0.0308" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__14__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__8__1">
+  <inertial>
+    <origin xyz="0.007822971456571542 0.0002792851015366994 -0.0069999999902281215" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="3e-05" iyy="6e-06" izz="3.3e-05" ixy="2e-06" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.129043 -0.00151 -0.0308" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__8__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.129043 -0.00151 -0.0308" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__8__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__7__1">
+  <inertial>
+    <origin xyz="0.004181482848370957 0.00661754726288763 -0.006999999990227872" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="1.2e-05" iyy="2.4e-05" izz="3.3e-05" ixy="1.1e-05" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.06455 -0.111804 -0.0308" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__7__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.06455 -0.111804 -0.0308" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__7__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__9__1">
+  <inertial>
+    <origin xyz="-0.0036403268609348227 0.006929983817907534 -0.006999999990227865" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="1.2e-05" iyy="2.4e-05" izz="3.3e-05" ixy="-1.1e-05" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.06455 -0.111804 -0.0308" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__9__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.06455 -0.111804 -0.0308" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__9__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__16__1">
+  <inertial>
+    <origin xyz="-0.009346291106602012 -0.0242698410028867 -7.442444359753719e-08" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.4e-05" iyy="1.3e-05" izz="2.2e-05" ixy="0.0" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.1491 -0.0257 -0.0238" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__16__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.1491 -0.0257 -0.0238" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__16__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__12__1">
+  <inertial>
+    <origin xyz="-0.025691591530349826 -0.004040407267701579 -7.442444359753719e-08" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.4e-05" iyy="1.4e-05" izz="2.2e-05" ixy="-0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.052293 -0.141974 -0.0238" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__12__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.052293 -0.141974 -0.0238" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__12__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__17__1">
+  <inertial>
+    <origin xyz="-0.015479275019963434 0.019729433735185112 -7.442444359753719e-08" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.3e-05" iyy="1.4e-05" izz="2.2e-05" ixy="0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.096807 -0.116274 -0.0238" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__17__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.096807 -0.116274 -0.0238" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__17__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__14__1">
+  <inertial>
+    <origin xyz="0.007475674701198309 0.02490518307646479 -0.0004686957213811578" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.4e-05" iyy="1.3e-05" izz="2.2e-05" ixy="0.0" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.150926 0.022606 -0.0238" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__14__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.150926 0.022606 -0.0238" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__14__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__11__1">
+  <inertial>
+    <origin xyz="0.02569159153034995 0.004040407267701662 -7.442444359753719e-08" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.4e-05" iyy="1.4e-05" izz="2.2e-05" ixy="-0.0" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.052293 0.141974 -0.0238" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__11__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.052293 0.141974 -0.0238" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__11__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__15__1">
+  <inertial>
+    <origin xyz="0.016345300423747933 -0.020229433735185112 -7.442444358712885e-08" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.3e-05" iyy="1.4e-05" izz="2.2e-05" ixy="0.0" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.096807 0.116274 -0.0238" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__15__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.096807 0.116274 -0.0238" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__15__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_02_v4__5__1">
+  <inertial>
+    <origin xyz="0.1669228727373585 0.020902445566842082 -0.023157357563919442" rpy="0 0 0"/>
+    <mass value="0.04105300471747992"/>
+    <inertia ixx="1.5e-05" iyy="4e-06" izz="1.4e-05" ixy="-0.0" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.3357 0.0216 -0.0551" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__5__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.3357 0.0216 -0.0551" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__5__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1_1">
+  <inertial>
+    <origin xyz="0.007808624278132892 0.00038797425261862927 -0.00039198775041554557" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="3e-05" iyy="6e-06" izz="3.3e-05" ixy="2e-06" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.197212 -0.007229 -0.072752" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.197212 -0.007229 -0.072752" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__1__1">
+  <inertial>
+    <origin xyz="0.004088185563701829 0.006675300427065128 -1.0811188450032816e-07" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="1.1e-05" iyy="2.5e-05" izz="3.3e-05" ixy="1.1e-05" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.097881 -0.168645 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__1__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.097881 -0.168645 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__1__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__4__1">
+  <inertial>
+    <origin xyz="-0.003736266590891185 0.006879055314907373 -1.0811188440318364e-07" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="1.2e-05" iyy="2.4e-05" izz="3.3e-05" ixy="-1.1e-05" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.097977 -0.168589 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__4__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.097977 -0.168589 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__4__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__3__1">
+  <inertial>
+    <origin xyz="-0.007825426750808578 0.00020275488784269366 -1.0811188438930586e-07" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="3.1e-05" iyy="6e-06" izz="3.3e-05" ixy="1e-06" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.194991 0.000555 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__3__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.194991 0.000555 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__3__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__2__1">
+  <inertial>
+    <origin xyz="-0.0040891601599172545 -0.006675300427064712 -1.0811188438930586e-07" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="1.1e-05" iyy="2.5e-05" izz="3.3e-05" ixy="1.1e-05" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.097014 0.169145 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__2__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.097014 0.169145 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__2__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_03_v1__5__1">
+  <inertial>
+    <origin xyz="0.003736266590891199 -0.006879055314907456 -1.0811188443093922e-07" rpy="0 0 0"/>
+    <mass value="0.05764000858589589"/>
+    <inertia ixx="1.2e-05" iyy="2.4e-05" izz="3.3e-05" ixy="-1.1e-05" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.097977 0.168589 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__5__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.097977 0.168589 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_03_v1__5__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__2__1">
+  <inertial>
+    <origin xyz="0.025632644956766565 0.0043989565612095605 -1.8254610016643635e-07" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.4e-05" iyy="1.4e-05" izz="2.2e-05" ixy="-0.0" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.086142 0.198928 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__2__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.086142 0.198928 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__2__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__7__1">
+  <inertial>
+    <origin xyz="0.016626229086503935 -0.019999203750941302 -1.825461001109252e-07" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.3e-05" iyy="1.4e-05" izz="2.2e-05" ixy="0.0" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.129206 0.174065 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__7__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.129206 0.174065 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__7__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__3__1">
+  <inertial>
+    <origin xyz="-0.009006415870262435 -0.024398160312150946 -1.8254610015255857e-07" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.4e-05" iyy="1.3e-05" izz="2.2e-05" ixy="0.0" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.215348 -0.024863 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__3__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.215348 -0.024863 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__3__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__5__1">
+  <inertial>
+    <origin xyz="-0.025632644956766273 -0.0043989565612095605 -1.82546100124803e-07" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.4e-05" iyy="1.4e-05" izz="2.2e-05" ixy="-0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.086142 -0.198928 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__5__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.086142 -0.198928 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__5__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__4__1">
+  <inertial>
+    <origin xyz="-0.016626203682719345 0.019999203750941746 -1.8254610030521423e-07" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.3e-05" iyy="1.4e-05" izz="2.2e-05" ixy="0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.130072 -0.173565 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__4__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.130072 -0.173565 -0.075118" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__4__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__6__1">
+  <inertial>
+    <origin xyz="0.0071268046361492865 0.025007513608951527 -0.0004519731767454044" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.4e-05" iyy="1.3e-05" izz="2.2e-05" ixy="0.0" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.219405 0.016581 -0.071732" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__6__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.219405 0.016581 -0.071732" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__6__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="tibia_v1__3__1">
+  <inertial>
+    <origin xyz="-0.0010445934040880511 -0.037317929453938664 -0.03729780488494706" rpy="0 0 0"/>
+    <mass value="0.054419852764329944"/>
+    <inertia ixx="3.4e-05" iyy="3.8e-05" izz="1.5e-05" ixy="-4e-06" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.132484 0.185855 -0.082618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/tibia_v1__3__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.132484 0.185855 -0.082618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/tibia_v1__3__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="tibia_v1__5__1">
+  <inertial>
+    <origin xyz="0.031277900149300736 -0.01725150858488053 -0.038844895473744805" rpy="0 0 0"/>
+    <mass value="0.054419852764329944"/>
+    <inertia ixx="4e-05" iyy="3.2e-05" izz="1.5e-05" ixy="1e-06" iyz="-0.0" ixz="-1e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.228056 -0.030878 -0.078628" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/tibia_v1__5__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.228056 -0.030878 -0.078628" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/tibia_v1__5__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="tibia_v1__4__1">
+  <inertial>
+    <origin xyz="0.03284074844993215 0.01775432989738146 -0.03729780488494747" rpy="0 0 0"/>
+    <mass value="0.054419852764329944"/>
+    <inertia ixx="3.4e-05" iyy="3.9e-05" izz="1.5e-05" ixy="3e-06" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.095579 -0.207162 -0.082618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/tibia_v1__4__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.095579 -0.207162 -0.082618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/tibia_v1__4__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="tibia_v1__2__1">
+  <inertial>
+    <origin xyz="0.0010445934040884952 0.0373179294539385 -0.037297804884947085" rpy="0 0 0"/>
+    <mass value="0.054419852764329944"/>
+    <inertia ixx="3.4e-05" iyy="3.8e-05" izz="1.5e-05" ixy="-4e-06" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.132484 -0.185855 -0.082618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/tibia_v1__2__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.132484 -0.185855 -0.082618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/tibia_v1__2__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="tibia_v1_1">
+  <inertial>
+    <origin xyz="-0.03179612964205905 0.019563599556557513 -0.03729780488494694" rpy="0 0 0"/>
+    <mass value="0.054419852764329944"/>
+    <inertia ixx="4.1e-05" iyy="3.2e-05" izz="1.5e-05" ixy="0.0" iyz="-0.0" ixz="-1e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.227197 0.021807 -0.082618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/tibia_v1_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.227197 0.021807 -0.082618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/tibia_v1_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="tibia_v1__1__1">
+  <inertial>
+    <origin xyz="-0.03284072304614753 -0.017754329897380905 -0.0372978048849471" rpy="0 0 0"/>
+    <mass value="0.054419852764329944"/>
+    <inertia ixx="3.4e-05" iyy="3.9e-05" izz="1.5e-05" ixy="3e-06" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.094713 0.207662 -0.082618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/tibia_v1__1__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.094713 0.207662 -0.082618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/tibia_v1__1__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="_base_top_2_v2_v2_1">
+  <inertial>
+    <origin xyz="-0.0506019999999994 0.07364599999999995 0.002496379528052012" rpy="0 0 0"/>
+    <mass value="0.10277152195734479"/>
+    <inertia ixx="0.00017" iyy="0.00017" izz="0.000341" ixy="0.0" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.050602 0.073646 -0.043" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/_base_top_2_v2_v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.050602 0.073646 -0.043" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/_base_top_2_v2_v2_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_02_v4_1">
+  <inertial>
+    <origin xyz="-0.007376533419728326 0.0074606490497808094 0.007516249461808573" rpy="0 0 0"/>
+    <mass value="0.04105300471747992"/>
+    <inertia ixx="4e-06" iyy="1.5e-05" izz="1.4e-05" ixy="-0.0" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.161215 0.00797 -0.039459" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.161215 0.00797 -0.039459" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4_1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__19__1">
+  <inertial>
+    <origin xyz="-0.02212354340443068 -0.007809507386668886 0.0031536016755839974" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.3e-05" iyy="2.2e-05" izz="1.4e-05" ixy="-0.0" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.1486 -0.007593 -0.062618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__19__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.1486 -0.007593 -0.062618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__19__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_02_v4__6__1">
+  <inertial>
+    <origin xyz="-0.013820336509042089 -0.01626650257062781 0.0006426424360806218" rpy="0 0 0"/>
+    <mass value="0.04105300471747992"/>
+    <inertia ixx="7e-06" iyy="1.3e-05" izz="1.4e-05" ixy="-5e-06" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.098813 0.12955 -0.0313" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__6__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.098813 0.12955 -0.0313" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__6__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_02_v4__7__1">
+  <inertial>
+    <origin xyz="0.008697504506595177 -0.019501247134281023 0.00028179293756797064" rpy="0 0 0"/>
+    <mass value="0.04105300471747992"/>
+    <inertia ixx="1.5e-05" iyy="4e-06" izz="1.4e-05" ixy="1e-06" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.160239 -0.024732 -0.030664" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__7__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.160239 -0.024732 -0.030664" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__7__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_02_v4__4__1">
+  <inertial>
+    <origin xyz="0.020997489175468065 -0.003835942996214342 0.0006426424360805177" rpy="0 0 0"/>
+    <mass value="0.04105300471747992"/>
+    <inertia ixx="7e-06" iyy="1.3e-05" izz="1.4e-05" ixy="5e-06" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.063653 -0.14985 -0.0313" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__4__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.063653 -0.14985 -0.0313" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__4__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_02_v4__1__1">
+  <inertial>
+    <origin xyz="0.013820336509042075 0.016266502570627867 0.0006426424360805594" rpy="0 0 0"/>
+    <mass value="0.04105300471747992"/>
+    <inertia ixx="7e-06" iyy="1.3e-05" izz="1.4e-05" ixy="-5e-06" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.098813 -0.12955 -0.0313" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__1__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.098813 -0.12955 -0.0313" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__1__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_02_v4__8__1">
+  <inertial>
+    <origin xyz="-0.020997463771683572 0.003835942996214342 0.0006426424360805594" rpy="0 0 0"/>
+    <mass value="0.04105300471747992"/>
+    <inertia ixx="7e-06" iyy="1.3e-05" izz="1.4e-05" ixy="5e-06" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.062787 0.15035 -0.0313" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__8__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.062787 0.15035 -0.0313" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__8__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_02_v4__3__1">
+  <inertial>
+    <origin xyz="-0.010149655847532676 -0.0026582262795676603 0.007516249461808552" rpy="0 0 0"/>
+    <mass value="0.04105300471747992"/>
+    <inertia ixx="1.3e-05" iyy="6e-06" izz="1.4e-05" ixy="-5e-06" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.073705 0.143601 -0.039459" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__3__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.073705 0.143601 -0.039459" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__3__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_02_v4__2__1">
+  <inertial>
+    <origin xyz="-0.0027721224278043632 -0.010118875329348381 0.007516249461808615" rpy="0 0 0"/>
+    <mass value="0.04105300471747992"/>
+    <inertia ixx="1.2e-05" iyy="7e-06" izz="1.4e-05" ixy="5e-06" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.087509 0.135631 -0.039459" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__2__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.087509 0.135631 -0.039459" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__2__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_02_v4__9__1">
+  <inertial>
+    <origin xyz="0.008285465037416423 -0.006853995438974494 0.007136797710428806" rpy="0 0 0"/>
+    <mass value="0.04105300471747992"/>
+    <inertia ixx="4e-06" iyy="1.5e-05" izz="1.4e-05" ixy="-1e-06" iyz="0.0" ixz="1e-06"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.161232 -0.01194 -0.038832" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__9__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.161232 -0.01194 -0.038832" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__9__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_02_v4__11__1">
+  <inertial>
+    <origin xyz="0.010149681251317128 0.002658226279567577 0.007516249461808504" rpy="0 0 0"/>
+    <mass value="0.04105300471747992"/>
+    <inertia ixx="1.3e-05" iyy="6e-06" izz="1.4e-05" ixy="-5e-06" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.074571 -0.143101 -0.039459" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__11__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.074571 -0.143101 -0.039459" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__11__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="clamp_02_v4__10__1">
+  <inertial>
+    <origin xyz="0.01036312242780045 -0.002819124670650097 0.007516249461808289" rpy="0 0 0"/>
+    <mass value="0.04105300471747992"/>
+    <inertia ixx="1.2e-05" iyy="7e-06" izz="1.4e-05" ixy="5e-06" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.0951 -0.148569 -0.039459" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__10__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.0951 -0.148569 -0.039459" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/clamp_02_v4__10__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__22__1">
+  <inertial>
+    <origin xyz="-0.017825272599177322 0.015254671918997653 0.0031536016755839974" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="2e-05" iyy="1.6e-05" izz="1.4e-05" ixy="4e-06" iyz="0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.067724 -0.132488 -0.062618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__22__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.067724 -0.132488 -0.062618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__22__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__21__1">
+  <inertial>
+    <origin xyz="0.004298296209037558 0.023064179305666732 0.003153601675583928" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="2e-05" iyy="1.5e-05" izz="1.4e-05" ixy="-4e-06" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.081742 -0.124395 -0.062618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__21__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.081742 -0.124395 -0.062618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__21__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__1__1">
+  <inertial>
+    <origin xyz="0.021600582126684004 0.009467947260433436 0.002040609402879881" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="1.4e-05" iyy="2.2e-05" izz="1.4e-05" ixy="-1e-06" iyz="0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.151002 0.004442 -0.062594" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__1__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.151002 0.004442 -0.062594" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__1__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__18__1">
+  <inertial>
+    <origin xyz="0.01782527259917746 -0.015254671918997653 0.0031536016755839974" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="2e-05" iyy="1.6e-05" izz="1.4e-05" ixy="4e-06" iyz="-0.0" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.067724 0.132488 -0.062618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__18__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="-0.067724 0.132488 -0.062618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__18__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="motor_v1__20__1">
+  <inertial>
+    <origin xyz="-0.004298270805253079 -0.023064179305666482 0.0031536016755839974" rpy="0 0 0"/>
+    <mass value="0.07982237365097052"/>
+    <inertia ixx="2e-05" iyy="1.5e-05" izz="1.4e-05" ixy="-4e-06" iyz="-0.0" ixz="-0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.080876 0.124895 -0.062618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__20__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+  </visual>
+  <collision>
+    <origin xyz="0.080876 0.124895 -0.062618" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="package://assembly_05_description/meshes/motor_v1__20__1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<joint name="Rigid 1" type="fixed">
+  <origin xyz="0.0816 -0.0075 0.003" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="motor_v1__23__1"/>
+</joint>
+
+<joint name="Rigid 2" type="fixed">
+  <origin xyz="0.047295 0.066918 0.003" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="motor_v1_1"/>
+</joint>
+
+<joint name="Rigid 3" type="fixed">
+  <origin xyz="-0.041805 0.087408 0.003" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="motor_v1__9__1"/>
+</joint>
+
+<joint name="Rigid 4" type="fixed">
+  <origin xyz="-0.0816 0.0075 0.003" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="motor_v1__8__1"/>
+</joint>
+
+<joint name="Rigid 5" type="fixed">
+  <origin xyz="-0.047295 -0.066918 0.003" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="motor_v1__13__1"/>
+</joint>
+
+<joint name="Rigid 6" type="fixed">
+  <origin xyz="0.034305 -0.074418 0.003" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="motor_v1__10__1"/>
+</joint>
+
+<joint name="Revolute 7" type="continuous">
+  <origin xyz="0.0275 0.0075 0.0465" rpy="0 0 0"/>
+  <parent link="motor_v1__23__1"/>
+  <child link="clamp_03_v1__15__1"/>
+  <axis xyz="-0.0 0.0 1.0"/>
+</joint>
+
+<joint name="Revolute 8" type="continuous">
+  <origin xyz="0.007255 0.027565 0.0465" rpy="0 0 0"/>
+  <parent link="motor_v1_1"/>
+  <child link="clamp_03_v1__12__1"/>
+  <axis xyz="-0.0 0.0 1.0"/>
+</joint>
+
+<joint name="Revolute 9" type="continuous">
+  <origin xyz="-0.012745 0.007075 0.0465" rpy="0 0 0"/>
+  <parent link="motor_v1__9__1"/>
+  <child link="clamp_03_v1__16__1"/>
+  <axis xyz="0.0 -0.0 1.0"/>
+</joint>
+
+<joint name="Revolute 10" type="continuous">
+  <origin xyz="-0.0275 -0.0075 0.0465" rpy="0 0 0"/>
+  <parent link="motor_v1__8__1"/>
+  <child link="clamp_03_v1__6__1"/>
+  <axis xyz="-0.0 -0.0 1.0"/>
+</joint>
+
+<joint name="Revolute 11" type="continuous">
+  <origin xyz="-0.007255 -0.027565 0.0465" rpy="0 0 0"/>
+  <parent link="motor_v1__13__1"/>
+  <child link="clamp_03_v1__11__1"/>
+  <axis xyz="0.0 0.0 1.0"/>
+</joint>
+
+<joint name="Revolute 12" type="continuous">
+  <origin xyz="0.020245 -0.020065 0.0465" rpy="0 0 0"/>
+  <parent link="motor_v1__10__1"/>
+  <child link="clamp_03_v1__17__1"/>
+  <axis xyz="-0.0 -0.0 1.0"/>
+</joint>
+
+<joint name="Rigid 13" type="fixed">
+  <origin xyz="-0.02 0.0 -0.0187" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__6__1"/>
+  <child link="clamp_03_v1__13__1"/>
+</joint>
+
+<joint name="Rigid 14" type="fixed">
+  <origin xyz="-0.01 -0.017321 -0.0187" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__11__1"/>
+  <child link="clamp_03_v1__10__1"/>
+</joint>
+
+<joint name="Rigid 15" type="fixed">
+  <origin xyz="0.01 -0.017321 -0.0187" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__17__1"/>
+  <child link="clamp_03_v1__14__1"/>
+</joint>
+
+<joint name="Rigid 16" type="fixed">
+  <origin xyz="0.019943 0.00151 -0.0187" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__15__1"/>
+  <child link="clamp_03_v1__8__1"/>
+</joint>
+
+<joint name="Rigid 17" type="fixed">
+  <origin xyz="0.01 0.017321 -0.0187" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__12__1"/>
+  <child link="clamp_03_v1__7__1"/>
+</joint>
+
+<joint name="Rigid 18" type="fixed">
+  <origin xyz="-0.01 0.017321 -0.0187" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__16__1"/>
+  <child link="clamp_03_v1__9__1"/>
+</joint>
+
+<joint name="Revolute 19" type="continuous">
+  <origin xyz="-0.02 0.0257 -0.007" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__13__1"/>
+  <child link="motor_v1__16__1"/>
+  <axis xyz="-0.0 -1.0 0.0"/>
+</joint>
+
+<joint name="Revolute 20" type="continuous">
+  <origin xyz="0.012257 0.03017 -0.007" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__9__1"/>
+  <child link="motor_v1__12__1"/>
+  <axis xyz="-0.866025 -0.5 0.0"/>
+</joint>
+
+<joint name="Revolute 21" type="continuous">
+  <origin xyz="0.032257 0.00447 -0.007" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__7__1"/>
+  <child link="motor_v1__17__1"/>
+  <axis xyz="-0.866025 0.5 0.0"/>
+</joint>
+
+<joint name="Revolute 22" type="continuous">
+  <origin xyz="0.021883 -0.024116 -0.007" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__8__1"/>
+  <child link="motor_v1__14__1"/>
+  <axis xyz="-0.07551 0.997145 -0.0"/>
+</joint>
+
+<joint name="Revolute 23" type="continuous">
+  <origin xyz="-0.012257 -0.03017 -0.007" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__14__1"/>
+  <child link="motor_v1__11__1"/>
+  <axis xyz="0.866025 0.5 0.0"/>
+</joint>
+
+<joint name="Revolute 24" type="continuous">
+  <origin xyz="-0.032257 -0.00447 -0.007" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__10__1"/>
+  <child link="motor_v1__15__1"/>
+  <axis xyz="0.866025 -0.5 0.0"/>
+</joint>
+
+<joint name="Rigid 26" type="fixed">
+  <origin xyz="-0.1866 -0.0473 0.0313" rpy="0 0 0"/>
+  <parent link="motor_v1__16__1"/>
+  <child link="clamp_02_v4__5__1"/>
+</joint>
+
+<joint name="Revolute 38" type="continuous">
+  <origin xyz="0.04621 0.011671 0.010158" rpy="0 0 0"/>
+  <parent link="motor_v1__1__1"/>
+  <child link="clamp_03_v1_1"/>
+  <axis xyz="0.994739 0.08933 -0.050135"/>
+</joint>
+
+<joint name="Revolute 39" type="continuous">
+  <origin xyz="0.016139 0.04425 0.0125" rpy="0 0 0"/>
+  <parent link="motor_v1__21__1"/>
+  <child link="clamp_03_v1__1__1"/>
+  <axis xyz="0.48786 0.872922 -0.0"/>
+</joint>
+
+<joint name="Revolute 40" type="continuous">
+  <origin xyz="-0.030253 0.036101 0.0125" rpy="0 0 0"/>
+  <parent link="motor_v1__22__1"/>
+  <child link="clamp_03_v1__4__1"/>
+  <axis xyz="-0.512043 0.85896 -0.0"/>
+</joint>
+
+<joint name="Revolute 41" type="continuous">
+  <origin xyz="-0.046391 -0.008148 0.0125" rpy="0 0 0"/>
+  <parent link="motor_v1__19__1"/>
+  <child link="clamp_03_v1__3__1"/>
+  <axis xyz="-0.999903 -0.013962 -0.0"/>
+</joint>
+
+<joint name="Revolute 42" type="continuous">
+  <origin xyz="-0.016138 -0.04425 0.0125" rpy="0 0 0"/>
+  <parent link="motor_v1__20__1"/>
+  <child link="clamp_03_v1__2__1"/>
+  <axis xyz="-0.48786 -0.872922 -0.0"/>
+</joint>
+
+<joint name="Revolute 43" type="continuous">
+  <origin xyz="0.030253 -0.036101 0.0125" rpy="0 0 0"/>
+  <parent link="motor_v1__18__1"/>
+  <child link="clamp_03_v1__5__1"/>
+  <axis xyz="0.512043 -0.85896 -0.0"/>
+</joint>
+
+<joint name="Revolute 44" type="continuous">
+  <origin xyz="-0.011835 -0.030339 0.0" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__5__1"/>
+  <child link="motor_v1__2__1"/>
+  <axis xyz="0.85896 0.512043 0.0"/>
+</joint>
+
+<joint name="Revolute 45" type="continuous">
+  <origin xyz="-0.032192 -0.00492 0.0" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__2__1"/>
+  <child link="motor_v1__7__1"/>
+  <axis xyz="0.872922 -0.48786 0.0"/>
+</joint>
+
+<joint name="Revolute 46" type="continuous">
+  <origin xyz="-0.020357 0.025418 0.0" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__3__1"/>
+  <child link="motor_v1__3__1"/>
+  <axis xyz="0.013962 -0.999903 0.0"/>
+</joint>
+
+<joint name="Revolute 47" type="continuous">
+  <origin xyz="0.011835 0.030339 0.0" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__4__1"/>
+  <child link="motor_v1__5__1"/>
+  <axis xyz="-0.85896 -0.512043 0.0"/>
+</joint>
+
+<joint name="Revolute 48" type="continuous">
+  <origin xyz="0.032191 0.00492 0.0" rpy="0 0 0"/>
+  <parent link="clamp_03_v1__1__1"/>
+  <child link="motor_v1__4__1"/>
+  <axis xyz="-0.872922 0.48786 0.0"/>
+</joint>
+
+<joint name="Revolute 49" type="continuous">
+  <origin xyz="0.022193 -0.02381 -0.00102" rpy="0 0 0"/>
+  <parent link="clamp_03_v1_1"/>
+  <child link="motor_v1__6__1"/>
+  <axis xyz="-0.089408 0.995995 0.0007"/>
+</joint>
+
+<joint name="Rigid 50" type="fixed">
+  <origin xyz="0.046342 0.013073 0.0075" rpy="0 0 0"/>
+  <parent link="motor_v1__2__1"/>
+  <child link="tibia_v1__3__1"/>
+</joint>
+
+<joint name="Rigid 51" type="fixed">
+  <origin xyz="0.008651 0.047459 0.006896" rpy="0 0 0"/>
+  <parent link="motor_v1__6__1"/>
+  <child link="tibia_v1__5__1"/>
+</joint>
+
+<joint name="Rigid 52" type="fixed">
+  <origin xyz="-0.034493 0.033597 0.0075" rpy="0 0 0"/>
+  <parent link="motor_v1__4__1"/>
+  <child link="tibia_v1__4__1"/>
+</joint>
+
+<joint name="Rigid 53" type="fixed">
+  <origin xyz="-0.046342 -0.013073 0.0075" rpy="0 0 0"/>
+  <parent link="motor_v1__5__1"/>
+  <child link="tibia_v1__2__1"/>
+</joint>
+
+<joint name="Rigid 54" type="fixed">
+  <origin xyz="-0.011849 -0.04667 0.0075" rpy="0 0 0"/>
+  <parent link="motor_v1__3__1"/>
+  <child link="tibia_v1_1"/>
+</joint>
+
+<joint name="Rigid 55" type="fixed">
+  <origin xyz="0.034493 -0.033597 0.0075" rpy="0 0 0"/>
+  <parent link="motor_v1__7__1"/>
+  <child link="tibia_v1__1__1"/>
+</joint>
+
+<joint name="Rigid 56" type="fixed">
+  <origin xyz="0.016297 0.000772 0.04" rpy="0 0 0"/>
+  <parent link="motor_v1__10__1"/>
+  <child link="_base_top_2_v2_v2_1"/>
+</joint>
+
+<joint name="Rigid 57" type="fixed">
+  <origin xyz="0.174485 0.01363 -0.015641" rpy="0 0 0"/>
+  <parent link="clamp_02_v4__5__1"/>
+  <child link="clamp_02_v4_1"/>
+</joint>
+
+<joint name="Rigid 58" type="fixed">
+  <origin xyz="0.012615 0.015563 0.023159" rpy="0 0 0"/>
+  <parent link="clamp_02_v4_1"/>
+  <child link="motor_v1__19__1"/>
+</joint>
+
+<joint name="Rigid 59" type="fixed">
+  <origin xyz="0.04652 0.012424 0.0075" rpy="0 0 0"/>
+  <parent link="motor_v1__11__1"/>
+  <child link="clamp_02_v4__6__1"/>
+</joint>
+
+<joint name="Rigid 60" type="fixed">
+  <origin xyz="0.009313 0.047338 0.006864" rpy="0 0 0"/>
+  <parent link="motor_v1__14__1"/>
+  <child link="clamp_02_v4__7__1"/>
+</joint>
+
+<joint name="Rigid 61" type="fixed">
+  <origin xyz="-0.033154 0.033576 0.0075" rpy="0 0 0"/>
+  <parent link="motor_v1__17__1"/>
+  <child link="clamp_02_v4__4__1"/>
+</joint>
+
+<joint name="Rigid 62" type="fixed">
+  <origin xyz="-0.04652 -0.012424 0.0075" rpy="0 0 0"/>
+  <parent link="motor_v1__12__1"/>
+  <child link="clamp_02_v4__1__1"/>
+</joint>
+
+<joint name="Rigid 63" type="fixed">
+  <origin xyz="0.03402 -0.034076 0.0075" rpy="0 0 0"/>
+  <parent link="motor_v1__15__1"/>
+  <child link="clamp_02_v4__8__1"/>
+</joint>
+
+<joint name="Rigid 64" type="fixed">
+  <origin xyz="-0.010918 0.006749 0.008159" rpy="0 0 0"/>
+  <parent link="clamp_02_v4__8__1"/>
+  <child link="clamp_02_v4__3__1"/>
+</joint>
+
+<joint name="Rigid 65" type="fixed">
+  <origin xyz="-0.011304 -0.006081 0.008159" rpy="0 0 0"/>
+  <parent link="clamp_02_v4__6__1"/>
+  <child link="clamp_02_v4__2__1"/>
+</joint>
+
+<joint name="Rigid 66" type="fixed">
+  <origin xyz="0.000993 -0.012792 0.008168" rpy="0 0 0"/>
+  <parent link="clamp_02_v4__7__1"/>
+  <child link="clamp_02_v4__9__1"/>
+</joint>
+
+<joint name="Rigid 67" type="fixed">
+  <origin xyz="0.010918 -0.006749 0.008159" rpy="0 0 0"/>
+  <parent link="clamp_02_v4__4__1"/>
+  <child link="clamp_02_v4__11__1"/>
+</joint>
+
+<joint name="Rigid 68" type="fixed">
+  <origin xyz="0.003713 0.019019 0.008159" rpy="0 0 0"/>
+  <parent link="clamp_02_v4__1__1"/>
+  <child link="clamp_02_v4__10__1"/>
+</joint>
+
+<joint name="Rigid 69" type="fixed">
+  <origin xyz="0.027376 -0.016081 0.023159" rpy="0 0 0"/>
+  <parent link="clamp_02_v4__10__1"/>
+  <child link="motor_v1__22__1"/>
+</joint>
+
+<joint name="Rigid 70" type="fixed">
+  <origin xyz="0.007171 -0.018706 0.023159" rpy="0 0 0"/>
+  <parent link="clamp_02_v4__11__1"/>
+  <child link="motor_v1__21__1"/>
+</joint>
+
+<joint name="Rigid 71" type="fixed">
+  <origin xyz="-0.01023 -0.016382 0.023762" rpy="0 0 0"/>
+  <parent link="clamp_02_v4__9__1"/>
+  <child link="motor_v1__1__1"/>
+</joint>
+
+<joint name="Rigid 72" type="fixed">
+  <origin xyz="-0.019785 0.003143 0.023159" rpy="0 0 0"/>
+  <parent link="clamp_02_v4__2__1"/>
+  <child link="motor_v1__18__1"/>
+</joint>
+
+<joint name="Rigid 73" type="fixed">
+  <origin xyz="-0.007171 0.018706 0.023159" rpy="0 0 0"/>
+  <parent link="clamp_02_v4__3__1"/>
+  <child link="motor_v1__20__1"/>
+</joint>
+
+</robot>

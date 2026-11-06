@@ -382,8 +382,8 @@ manager.onProgress=(_u,done,total)=>document.getElementById('pct').textContent=M
 manager.onLoad=()=>{if(robot)wake();};
 manager.onError=u=>document.getElementById('load').textContent='Could not load '+u;
 const loader=new URDFLoader(manager);
-loader.packages={assembly_05_description:'/pkg/assembly_05_description'};
-loader.load('/pkg/assembly_05_description/urdf/assembly_05.urdf',r=>{robot=r;});
+loader.packages={assembly_05_description:'/pkg-lite/assembly_05_description'};  // scripts/bake_web_robot.py
+loader.load('/pkg-lite/assembly_05_description/urdf/assembly_05.urdf',r=>{robot=r;});
 
 function wake(){
   const bodyMat=new THREE.MeshStandardMaterial({color:0xd9d3c5,metalness:.55,roughness:.35});

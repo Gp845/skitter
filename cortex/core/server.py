@@ -206,6 +206,7 @@ def create_app(rt, og, feed=None, hub=None):
 
     if hub:
         app.mount("/pkg", StaticFiles(directory=ROBOT_PKG), name="pkg")
+        app.mount("/pkg-lite", StaticFiles(directory=WEB / "pkg_lite"), name="pkg-lite")
 
         @app.get("/account")
         def account_page(req: Request):
@@ -277,6 +278,7 @@ def create_app(rt, og, feed=None, hub=None):
     private_page("recordings.html", "/recordings")
 
     app.mount("/pkg", StaticFiles(directory=ROBOT_PKG), name="pkg")  # URDF + meshes for the 3D landing page
+    app.mount("/pkg-lite", StaticFiles(directory=WEB / "pkg_lite"), name="pkg-lite")  # decimated copy the page loads
 
     @app.get("/api/frame")
     def frame():
