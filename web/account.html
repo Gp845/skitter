@@ -62,7 +62,7 @@
     <form class="row" id="f"><input id="k" type="password" autocomplete="off" placeholder="paste your sk- or mk- key (from pc.0g.ai)" aria-label="0G API key"><button>Save</button></form>
     <div id="msg"></div>
   </section>
-  <section>
+  <section id="credbox" hidden>
     <div class="l">0G Private Computer credits · iAI daily credits + deposit, spent by your robot</div>
     <div class="v" id="cred">…</div>
     <div class="v" id="credacct"></div>
@@ -92,7 +92,7 @@ const money=(c,v)=>c==='usd'?'$'+v.toFixed(4):v.toFixed(5)+' 0G';
 async function cred(){
   const r=await api('/api/account/credits');const c=await r.json();
   if(!r.ok){$('cred').textContent='unavailable: '+(c.error||r.status);return}
-  if(!c.linked){$('cred').innerHTML='<span class=warn>not linked</span>: on pc.0g.ai create a management key (mk-, scope account:read) and paste it above to see your credits go down here';$('credacct').textContent=$('credrecent').textContent='';return}
+  $('credbox').hidden=!c.linked;if(!c.linked)return;
   $('cred').innerHTML=`<span class=ok>${E(money(c.currency,c.total))}</span> left · credits ${E(money(c.currency,c.credit))} · deposit ${E(money(c.currency,c.deposit))}`;
   $('credacct').innerHTML=`0G account ${E(c.address)} `+(c.is_you?'<span class=ok>= the wallet you signed in with</span>':'<span class=warn>≠ the wallet you signed in with</span>');
   $('credrecent').innerHTML=c.recent.map(u=>`${E(u.t)} · ${E(u.request_id)} · ${E(u.model)} · −${E(money(c.currency,u.cost))} (credits ${E(money(c.currency,u.credit_used))})`).join('<br>');
