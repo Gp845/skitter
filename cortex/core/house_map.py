@@ -33,7 +33,8 @@ class HouseMap:
         os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
         tmp = self.path + ".tmp"
         with open(tmp, "w") as f:
-            json.dump({"nodes": self.nodes, "edges": self.edges, "rooms": self.rooms(), "objects": self.objects}, f, indent=1)
+            json.dump({"nodes": self.nodes, "edges": self.edges, "rooms": self.rooms(), "checkpoints": self.checkpoints(),
+                       "objects": self.objects}, f, indent=1)
         os.replace(tmp, self.path)
 
     # ---- building ----
@@ -79,11 +80,24 @@ class HouseMap:
             out[r] = min(ks, key=lambda k: math.hypot(self.nodes[k]["x"] - mx, self.nodes[k]["y"] - my))
         return out
 
+    def checkpoints(self, only=None):
+        """[{name, room, node, x, y, level}] one per room, in the order exploration first reached it: the patrol loop.
+        only: room names or levels to keep (e.g. ["loft study"], [1])."""
+        first = {}
+        for k in sorted(self.nodes, key=lambda k: int(k[1:])):
+            first.setdefault(self.nodes[k]["room"], k)
+        out = [{"name": f"checkpoint {i}", "room": r, "node": k, **{c: self.nodes[k][c] for c in ("x", "y", "level")}}
+               for i, (r, k) in enumerate(sorted(self.rooms().items(), key=lambda rk: int(first[rk[0]][1:])), 1)]
+        return [c for c in out if not only or c["room"] in only or c["level"] in only]
+
     def places(self):
-        return sorted(self.rooms()) + sorted(o for o in self.objects if o not in self.rooms())
+        return sorted(self.rooms()) + sorted(o for o in self.objects if o not in self.rooms()) + \
+            [c["name"] for c in self.checkpoints()]
 
     def target(self, place):
         place = str(place).strip().lower()
+        if cp := next((c for c in self.checkpoints() if c["name"] == place), None):
+            return cp["node"]
         rooms = self.rooms()
         for name in list(rooms) + list(self.objects):
             if name == place:
@@ -135,4 +149,5 @@ class HouseMap:
         here = self.nodes[self.nearest(x, y, self.level_at(x, y, z))]
         return {"you_are_in": here["room"] or "unknown", "level": here["level"],
                 "rooms": {r: [self.nodes[k]["x"], self.nodes[k]["y"], self.nodes[k]["level"]] for r, k in self.rooms().items()},
+                "checkpoints": {c["name"]: c["room"] for c in self.checkpoints()},
                 "objects": {o: [v["x"], v["y"], v["room"]] for o, v in list(self.objects.items())[-30:]}}
