@@ -9,14 +9,15 @@ import pybullet as p
 import pybullet_data
 
 from .arena import move_person
-from .gait import Gait
+from .gait import SPEEDS, Gait
 from .skills import BLOCK_DEPTH, TRACK_EVERY, Skill
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 URDF = os.path.join(HERE, "assembly_05_description", "urdf", "assembly_05.urdf")
 SIM_HZ = 240
 W, H, NEAR, FAR = 320, 240, 0.02, 10.0
-GOAL_KINDS = ("turn", "walk", "face", "approach", "follow", "climb")
+WALK_TOP_CM, CROUCH_TOP_CM, VENT_MIN_CM = 17, 15, 16  # measured tallest point while walking (knees), see test_vent
+GOAL_KINDS = ("turn", "walk", "face", "approach", "follow", "climb")  # crawl is remapped to walk before this
 
 BBOX = {k: [0, 1000] for k in ("x1", "y1", "x2", "y2")}
 BBOX_HELP = ("Give the target's bounding box in the CURRENT image as integers 0-1000 "
@@ -50,8 +51,9 @@ class HexapodAdapter:
         self.world = world if arena else None
         self.patrol_route, self.person_px = [], 0
         if self.world == "house":
-            from .house import PATROL, build_house
+            from .house import EXPLORE, PATROL, ROOMS, build_house
             self.objects, self.patrol_route = build_house(), PATROL
+            self.explore_route, self.rooms = EXPLORE, list(ROOMS)
         elif self.world:
             from .arena import PATROL, build_arena
             self.objects, self.patrol_route = build_arena(), PATROL
@@ -100,7 +102,8 @@ class HexapodAdapter:
         return {
             "name": "skitter",
             "description": "Skitter, a small six-legged home assistant robot (about 30 cm wide) with a front camera. "
-                           "It walks about 10 cm/s and cannot see behind itself. It helps its user by going places, "
+                           f"It walks about 10 cm/s at speed 100% (set_speed: {SPEEDS[0]}-{SPEEDS[1]}%, i.e. about "
+                           f"{SPEEDS[0] // 10}-{SPEEDS[1] // 10} cm/s) and cannot see behind itself. It helps its user by going places, "
                            "finding things, coming to or following them, and answering questions about what it sees. "
                            "The user is the person in the home (yellow shirt, purple trousers): 'me' means them.",
             "actions": [
@@ -110,6 +113,15 @@ class HexapodAdapter:
                 {"name": "walk", "goal": True, "timeout_s": 30,
                  "description": "Walk straight for a distance; finishes on its own, stops early if blocked.",
                  "params": {"direction": ["forward", "backward"], "distance_cm": [5, 150]}},
+                {"name": "crawl", "goal": True, "timeout_s": 40,
+                 "description": f"Like walk, but crouched (about {CROUCH_TOP_CM} cm tall instead of {WALK_TOP_CM}) to get "
+                                f"through a low vent or crawl space (openings {VENT_MIN_CM} cm high or more). "
+                                "Line up straight in front of the opening first and crawl all the way through.",
+                 "params": {"direction": ["forward", "backward"], "distance_cm": [5, 300]}},
+                {"name": "set_speed", "goal": True, "timeout_s": 5,
+                 "description": "Set the walking speed for walk/turn/approach/follow/patrol, in percent of normal "
+                                "(100 = about 10 cm/s). Instant; stays until changed. Stairs always go at their own pace.",
+                 "params": {"percent": list(SPEEDS)}},
                 {"name": "face", "goal": True, "timeout_s": 30,
                  "description": "Turn in place until the target is centred in the camera. " + BBOX_HELP,
                  "params": {"label": "string", **BBOX}},
@@ -123,14 +135,16 @@ class HexapodAdapter:
                                 + BBOX_HELP,
                  "params": {"label": "string", **BBOX}},
                 {"name": "climb", "goal": True, "timeout_s": 120,
-                 "description": "Climb a step or short staircase straight ahead with a special stair gait. Face the "
-                                "stairs square-on first and start 0.3-1 m before the first step. step_height_cm is "
+                 "description": "Climb a step or short staircase straight ahead, up or down, with a special stair gait. "
+                                "Face the stairs square-on first and start 0.5-1 m before the first edge (closer: it "
+                                "backs off first). step_height_cm is "
                                 "the riser height (use the user's number if they give one); steps, tread_cm and "
                                 "width_cm describe the stairs (width_cm 100 if unknown). Narrow stairs: Skitter tucks its legs "
-                                "in; shallow treads: it turns side-on and crabs up; both "
+                                "in and centres itself; shallow treads: it turns side-on and crabs; both "
                                 "automatic. Skitter measures the first step with its depth camera and "
                                 "refuses (height_mismatch / too_steep / too_narrow / no_step) rather than guess.",
-                 "params": {"step_height_cm": [2, 6], "steps": [1, 3], "tread_cm": [25, 60], "width_cm": [20, 200]}},
+                 "params": {"direction": ["up", "down"], "step_height_cm": [2, 6], "steps": [1, 3],
+                            "tread_cm": [25, 60], "width_cm": [20, 200]}},
                 {"name": "look_around", "goal": True, "timeout_s": 30,
                  "description": "Turn 90 degrees left to look for something (or someone) that is not in view and "
                                 "not in known_objects. Repeat up to 4 times before asking the user.",
@@ -144,45 +158,74 @@ class HexapodAdapter:
         pos, (roll, pitch, yaw) = self.pose()
         tilt = math.degrees(max(abs(roll), abs(pitch)))
         return {"x": pos[0], "y": pos[1], "z": pos[2], "yaw": yaw, "tilt_deg": tilt,
-                "fallen": tilt > 35 or pos[2] < 0.02, "step": self.t,
-                "busy": self.busy(), "last_result": self._result}
+                "fallen": tilt > 35 or pos[2] < 0.02, "step": self.t, "speed_percent": self.gait.percent,
+                "crouched": self.gait.crouch, "busy": self.busy(), "last_result": self._result}
 
     def get_frame(self):
         moving = self.skill is not None or self.cmd is not None  # skills already render at 10 Hz: reuse that image
         img = self.sensed_bgr if moving and self.t - self.sensed_t <= TRACK_EVERY else self.render()[0]
         return cv2.imencode(".jpg", img)[1].tobytes()
 
-    def find_step(self, max_dist=1.5):
-        """First riser straight ahead from the depth camera, or None:
-        (distance from body centre, riser height, yaw to turn to be square to it [rad, + = left])."""
+    def find_step(self, max_dist=1.5, down=False):
+        """First riser (down: first drop) straight ahead from the depth camera, or None: (distance from body
+        centre, riser height, yaw to turn to be square to it [rad, + = left], sideways offset of the stairs'
+        centre line from the body centre, square to the stairs [m, + = left; 0 if wider than the view])."""
         _, depth = self.render()
-        pos, _ = self.pose()
-        cam_h = pos[2] + 0.12                                   # eye is 0.12 m above the base origin
+        feet = min(p.getAABB(self.robot, j)[0][2] for j in range(p.getNumJoints(self.robot))) + 0.004  # AABB margin
+        cam_h = self.pose()[0][2] + 0.12 - feet                 # eye above the floor the robot stands on (any level)
         pitch, f = math.atan2(0.12, 1.0), (H / 2) / math.tan(math.radians(35))
+        rows = range(H // 2, 180)                               # rows below ~180 see Skitter's own shell
 
-        def scan(c):  # (dist from centre, height) per row, looking down image column strip c-20..c+20
-            out = []
-            for v in range(H // 2, 180):                        # rows below ~180 see Skitter's own shell
-                phi = math.atan((v + 0.5 - H / 2) / f)
-                r = float(np.median(depth[v, c - 20: c + 20])) / math.cos(phi)
-                out.append((r * math.cos(pitch + phi) + 0.20, cam_h - r * math.sin(pitch + phi)))
-            return out
+        def point(v, d):  # (dist from centre, height above our floor) of depth d in image row v
+            phi = math.atan((v + 0.5 - H / 2) / f)
+            r = d / math.cos(phi)
+            return r * math.cos(pitch + phi) + 0.20, cam_h - r * math.sin(pitch + phi)
+
+        def scan(c):  # per row, looking down image column strip c-20..c+20
+            return [point(v, float(np.median(depth[v, c - 20: c + 20]))) for v in rows]
 
         def first(hits):
-            raised = [d for d, z in hits if z > 0.01 and d < max_dist]
-            return min(raised) if raised else None
+            if not down:
+                raised = [d for d, z in hits if z > 0.01 and d < max_dist]
+                return min(raised) if raised else None
+            lower = [d for d, z in hits if z < -0.01 and d < max_dist]
+            near = [d for d, z in hits if lower and z >= -0.01 and d < min(lower)]
+            return max(near) if near else None                  # last floor point before the drop = the nosing
 
         hits = scan(W // 2)
         edge = first(hits)
         if edge is None:
             return None
-        height = max(z for d, z in hits if edge - 0.01 <= d <= edge + 0.06)
+        if down:
+            jump = min(d for d, z in hits if z < -0.01 and d > edge)
+            height = -max(z for d, z in hits if jump <= d <= jump + 0.06)
+        else:
+            jump, height = edge, max(z for d, z in hits if edge - 0.01 <= d <= edge + 0.06)
+        # narrow stairs: both side edges of the first tread in view. Fit its centre line over all the tread's rows:
+        # sideways pixels are ~3 mm here, rows ~1 cm, so this beats the edge strips below (1 row = 1.4 deg)
+        line = []
+        for v, (d, _) in zip(rows, hits):
+            if jump + 0.02 <= d <= jump + 0.45:
+                on = np.abs(point(v, depth[v])[1] - (-height if down else height)) < 0.012
+                lo = hi = W // 2
+                while lo > 0 and on[lo - 1]:
+                    lo -= 1
+                while hi < W - 1 and on[hi + 1]:
+                    hi += 1
+                if on[W // 2] and lo > 0 and hi < W - 1:
+                    line.append((d, depth[v, W // 2] * (W / 2 - (lo + hi + 1) / 2) / f))
+        if len(line) >= 5:
+            slope, at_centre = np.polyfit(*zip(*line), 1)
+            square = math.atan(slope)
+            return edge, height, square, float(at_centre) * math.cos(square)
+        square = 0.0
         for off in (W // 5, W // 10):                           # side strips: wide for accuracy, close for narrow stairs
             dl, dr = first(scan(W // 2 - off)), first(scan(W // 2 + off))
-            if dl is not None and dr is not None:
+            if dl is not None and dr is not None and abs(dl - edge) < 0.1 and abs(dr - edge) < 0.1:  # same riser
                 lat = lambda d: (d - 0.20) * off / f            # strip's sideways offset at that distance
-                return edge, height, math.atan2(dr - dl, lat(dr) + lat(dl))
-        return edge, height, 0.0
+                square = math.atan2(dr - dl, lat(dr) + lat(dl))
+                break
+        return edge, height, square, 0.0
 
     def locate(self, box):
         _, depth = self.render()
@@ -209,8 +252,18 @@ class HexapodAdapter:
         if action == "stop":
             return self.stop()
         self._result, self.skill, self.cmd = None, None, None
+        if action == "set_speed":
+            self.gait.set_speed(float(params["percent"]))
+            self._result = f"speed {self.gait.percent:.0f}%"
+            return
+        if action in ("crawl", "walk", "approach", "follow", "climb"):  # turning keeps the crouch (mid-vent fixes)
+            self.gait.crouch = action == "crawl"
+        if action == "crawl":
+            action = "walk"
         if action == "look_around":
             action, params = "turn", {"direction": "left", "degrees": 90}
+        if action == "climb":
+            self.step(1.0)  # stand still first: right after other stairs the legs are still re-spreading
         if action in GOAL_KINDS:
             self._sense()
             self.skill = Skill(action, params, self, lease_s)

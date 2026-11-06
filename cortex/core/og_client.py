@@ -11,9 +11,11 @@ load_dotenv()
 
 
 import json
-import pathlib
 
-LEDGER = pathlib.Path(__file__).resolve().parents[2] / "episodes" / "spend.json"
+from .episode import EPISODES
+
+LEDGER = EPISODES / "spend.json"
+NO_KEY = "none"  # set by the hub for accounts without a key: an unset OG_API_KEY would be filled from the owner's .env
 
 
 class Budget:
@@ -35,7 +37,7 @@ class Budget:
     def add(self, trace: dict):
         micro = (trace.get("billing") or {}).get("total_cost_usd_micro")
         usd = self.spent() + (int(micro) / 1e6 if micro else 0.002)  # unknown cost: assume 0.2c
-        LEDGER.parent.mkdir(exist_ok=True)
+        LEDGER.parent.mkdir(parents=True, exist_ok=True)
         LEDGER.write_text(json.dumps({"usd": usd}))
 
 
@@ -54,15 +56,21 @@ class OGResult:
 
 class OGClient:
     def __init__(self, api_key=None, base_url=None, timeout=30.0):
-        self.c = OpenAI(api_key=api_key or os.environ["OG_API_KEY"],
-                        base_url=base_url or os.environ.get("OG_BASE_URL", "https://router-api.0g.ai/v1"),
+        key = api_key or os.environ["OG_API_KEY"]
+        self.ready = key != NO_KEY
+        self.c = OpenAI(api_key=key, base_url=base_url or os.environ.get("OG_BASE_URL", "https://router-api.0g.ai/v1"),
                         timeout=timeout, max_retries=0)  # no silent retries: a retry is a new decision
         self.budget = Budget()
+
+    def _check(self):
+        if not self.ready:
+            raise OGError("no 0G API key for this robot yet: add yours on the Account page")
+        self.budget.check()
 
     def transcribe(self, wav: bytes, model=None, language="en") -> OGResult:
         # 0G's router no longer serves Whisper; an audio-capable chat model transcribes instead
         model = model or os.environ.get("STT_MODEL", "gemini-3.5-flash-lite")
-        self.budget.check()
+        self._check()
         t = time.time()
         try:
             raw = self.c.chat.completions.with_raw_response.create(
@@ -78,7 +86,7 @@ class OGClient:
 
     def decide(self, model, messages, tools, max_tokens=300) -> OGResult:
         """One chat call; the model must answer with a tool call."""
-        self.budget.check()
+        self._check()
         t = time.time()
         try:
             raw = self.c.chat.completions.with_raw_response.create(
@@ -94,7 +102,7 @@ class OGClient:
 
     def describe(self, model, jpeg, prompt, max_tokens=60) -> OGResult:
         """One image + one question, plain-text answer (security alerts)."""
-        self.budget.check()
+        self._check()
         t = time.time()
         try:
             raw = self.c.chat.completions.with_raw_response.create(

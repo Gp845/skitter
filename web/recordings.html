@@ -100,7 +100,7 @@
   @media (max-width:900px){main{grid-template-columns:1fr}.list{position:static;max-height:none}#clips{max-height:380px}}
 </style>
 <header>
-  <nav class="top"><a href="/">← Home</a><a href="/app">Control room</a><button id="logout">Log out</button></nav>
+  <nav class="top"><a href="/">← Home</a><a href="/app">Control room</a><a id="acctlink" href="/account" hidden>Account</a><button id="logout">Log out</button></nav>
   <div class="brand">
     <h1>Skit<b>ter</b></h1>
     <div>
@@ -145,6 +145,8 @@ const feedGet=u=>api(u,{headers:{'X-Skitter-Token':TOKEN}});
 const hm=t=>t?new Date(t*1000).toLocaleTimeString():'?';
 const PERSON_PX=150;
 $('logout').onclick=async()=>{try{await post('/api/logout')}finally{location.href='/'}};
+api('/api/status').then(r=>r.json()).then(s=>{if(s.account){$('acctlink').hidden=false;
+  $('count').title='robot of '+s.account;document.querySelector('.tag').textContent='Recordings · '+(s.account==='owner'?'owner':s.account.slice(0,6)+'…'+s.account.slice(-4))}}).catch(()=>{});
 
 let clips=[],sel=null;
 async function poll(){

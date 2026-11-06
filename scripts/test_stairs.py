@@ -4,7 +4,9 @@
    legs to fit one tread and crabs up.
 2. Narrow stairs (2 x 6 cm, 55 cm treads, 26 cm wide): head-on in a narrow stance.
 3. Refusals (wrong height, too narrow, too steep) and a single 6 cm step.
+4. Down: up the narrow stairs onto a wide landing, turn round, back down them (direction="down").
 """
+import math
 import os
 import sys
 
@@ -31,7 +33,7 @@ def narrow_world():  # riser at x = 0.6 straight ahead of the spawn
     return bot
 
 
-def climb(bot, params, name):
+def climb(bot, params, name, close=True):
     z0, max_tilt = bot.state()["z"], 0.0
     bot.execute("climb", params, 120)
     while bot.busy():
@@ -42,7 +44,8 @@ def climb(bot, params, name):
     print(f"{name} -> {bot.result()}  x={s['x']:.2f} y={s['y']:.2f}  body rose {rise * 100:.1f} cm (stairs 12 cm)  "
           f"max tilt {max_tilt:.1f} deg")
     assert bot.result() == "reached" and abs(rise - 0.12) < 0.015 and max_tilt < 20, f"{name} failed"
-    bot.close()
+    if close:
+        bot.close()
     return s
 
 
@@ -73,5 +76,25 @@ while bot.busy():
 s = bot.state()
 print(f"6 cm step -> {bot.result()}  x={s['x']:.2f}  body rose {(s['z'] - z0) * 100:.1f} cm  tilt {s['tilt_deg']:.1f}")
 assert bot.result() == "reached" and abs(s["z"] - z0 - 0.06) < 0.015, "6 cm step failed"
+bot.close()
+
+bot = HexapodAdapter(arena=False)  # down: narrow stairs up onto a wide landing, turn round, come back down them
+_box([0.875, 0.0, 0.03], [0.275, 0.13, 0.03], [0.75, 0.55, 0.35, 1])
+_box([1.95, 0.0, 0.06], [0.8, 0.8, 0.06], [0.65, 0.45, 0.28, 1])
+climb(bot, NARROW, "26 cm wide, up onto a wide landing", close=False)
+for action, params in [("walk", dict(direction="forward", distance_cm=45)), ("turn", dict(direction="left", degrees=180))]:
+    bot.execute(action, params, 60)
+    while bot.busy():
+        bot.step(0.05)
+s = bot.state()
+print(f"on the landing facing back: x={s['x']:.2f} y={s['y']:.2f} yaw={math.degrees(s['yaw']):.0f}")
+z0, max_tilt = s["z"], 0.0
+bot.execute("climb", dict(NARROW, direction="down"), 120)
+while bot.busy():
+    bot.step(0.05)
+    max_tilt = max(max_tilt, bot.state()["tilt_deg"])
+s = bot.state()
+print(f"down -> {bot.result()}  x={s['x']:.2f} y={s['y']:.2f}  body dropped {(z0 - s['z']) * 100:.1f} cm  max tilt {max_tilt:.1f}")
+assert bot.result() == "reached" and abs(z0 - s["z"] - 0.12) < 0.015 and max_tilt < 20 and s["x"] < 0.45, "descent failed"
 bot.close()
 print("stairs OK")

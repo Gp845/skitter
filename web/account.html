@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skitter · account</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Space+Grotesk:wght@400;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root{--cream:#e8e3d6;--ink:#0b0b0b;--red:#eb1716;--muted:#8a857a;--green:#7fbf7a;
+        --brush:"Permanent Marker",cursive;--sans:"Space Grotesk",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace}
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font:15px/1.55 var(--sans);background:var(--ink);color:var(--cream);min-height:100vh}
+  header{background:var(--cream);color:var(--ink);padding:24px 40px 56px;position:relative;
+    clip-path:polygon(0 0,100% 0,100% 82%,96% 86%,91% 80%,85% 88%,78% 83%,71% 90%,64% 82%,57% 87%,50% 81%,
+      43% 89%,36% 83%,29% 88%,22% 81%,15% 87%,8% 82%,3% 88%,0 84%)}
+  nav{position:absolute;top:18px;right:40px;display:flex;gap:22px;align-items:center;font:700 12px var(--sans);letter-spacing:.2em;text-transform:uppercase}
+  nav a{color:var(--ink);text-decoration:none;border-bottom:2px solid transparent}
+  nav a:hover{border-color:var(--red)}
+  #logout{font:700 12px var(--sans);letter-spacing:.2em;text-transform:uppercase;background:var(--ink);color:var(--cream);padding:7px 14px;border:0;cursor:pointer}
+  h1{font:400 clamp(56px,8vw,96px)/.85 var(--brush);margin:14px 0 0;transform:rotate(-2deg)}
+  h1 b{color:var(--red);font-weight:400}
+  .tag{font:700 13px var(--sans);letter-spacing:.35em;color:var(--red);margin-top:12px}
+  main{max-width:760px;margin:0 auto;padding:20px 40px 60px;display:flex;flex-direction:column;gap:30px}
+  section{border-top:1px solid #2a2a2a;padding-top:14px;display:flex;flex-direction:column;gap:10px}
+  .l{font:400 11px var(--mono);color:var(--muted);letter-spacing:.25em;text-transform:uppercase}
+  .v{font:400 15px var(--mono);word-break:break-all}
+  a{color:var(--cream)}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  input{flex:1;min-width:220px;font:400 16px var(--mono);padding:10px 12px;background:transparent;color:var(--cream);border:0;border-bottom:1.5px solid var(--muted)}
+  button,.btn{font:400 18px var(--brush);border:0;cursor:pointer;padding:10px 22px;border-radius:2px;background:var(--red);color:#fff;text-decoration:none}
+  button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--red);outline-offset:3px}
+  .ok{color:var(--green)}.warn{color:var(--red)}
+  #msg{font:400 12px var(--mono);min-height:18px}
+</style>
+<header>
+  <nav><a href="/">← Home</a><a href="/app">Control room</a><a href="/recordings">Recordings</a><button id="logout">Log out</button></nav>
+  <h1>Skit<b>ter</b></h1>
+  <div class="tag">ACCOUNT · <span id="acct"></span></div>
+</header>
+<main>
+  <section>
+    <div class="l">Your robot</div>
+    <div class="row"><span class="v" id="robot">…</span><a class="btn" href="/app">Open control room →</a></div>
+  </section>
+  <section>
+    <div class="l">Robot ENS name (ENSv2, Sepolia) · owned by your wallet, the robot may only update its own records</div>
+    <div class="v" id="ens">…</div>
+    <form class="row" id="ensf" hidden><input id="label" autocomplete="off" placeholder="pick a name, e.g. kitchen-bot" aria-label="ENS label"><button>Claim</button></form>
+    <div class="v" id="ensrec" style="font-size:12px"></div>
+    <div id="ensmsg"></div>
+  </section>
+  <section>
+    <div class="l">Robot wallet (0G Galileo) · signs your clips' storage and chain records</div>
+    <div class="v" id="wallet">…</div>
+    <div class="v">Balance: <span id="bal">…</span> · fund it at <a href="https://faucet.0g.ai" target="_blank" rel="noopener">faucet.0g.ai</a></div>
+    <div class="l" style="letter-spacing:.05em;text-transform:none">Each recorded clip costs two testnet transactions. The private key never leaves the server.</div>
+  </section>
+  <section>
+    <div class="l">0G Compute API key · pays for your robot's decisions</div>
+    <div class="v" id="key">…</div>
+    <form class="row" id="f"><input id="k" type="password" autocomplete="off" placeholder="paste your sk- or mk- key (from pc.0g.ai)" aria-label="0G API key"><button>Save</button></form>
+    <div id="msg"></div>
+  </section>
+  <section>
+    <div class="l">0G Private Computer credits · iAI daily credits + deposit, spent by your robot</div>
+    <div class="v" id="cred">…</div>
+    <div class="v" id="credacct"></div>
+    <div class="v" id="credrecent" style="font-size:12px;color:var(--muted)"></div>
+  </section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const TOKEN=document.querySelector('meta[name=skitter-token]')?.content||'';
+const api=(u,o)=>fetch(u,o).then(r=>{if(r.status===401){location.href='/login?next=/account';throw new Error('login required')}return r});
+const post=(u,b)=>api(u,{method:'POST',headers:{'Content-Type':'application/json','X-Skitter-Token':TOKEN},body:JSON.stringify(b||{})});
+let owner=false;
+async function load(){
+  const a=await (await api('/api/account')).json();owner=a.owner;
+  $('acct').textContent=a.owner?'OWNER':a.account;
+  $('robot').textContent=a.robot;$('robot').className='v '+(a.robot==='running'?'ok':'');
+  $('wallet').textContent=a.robot_wallet||'none';
+  $('key').innerHTML=a.owner?'from the server\'s .env':a.has_key?`<span class=ok>set</span> (ends ${a.key_hint.replace(/[<>&]/g,'')})`:'<span class=warn>not set: your robot can patrol and record, but can\'t take spoken commands</span>';
+  $('f').hidden=a.owner;
+}
+async function bal(){
+  const r=await api('/api/account/balance');const b=await r.json();
+  $('bal').textContent=r.ok?b.balance_0G.toFixed(4)+' 0G':'unavailable';
+}
+const E=s=>String(s??'').replace(/[<>&"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const money=(c,v)=>c==='usd'?'$'+v.toFixed(4):v.toFixed(5)+' 0G';
+async function cred(){
+  const r=await api('/api/account/credits');const c=await r.json();
+  if(!r.ok){$('cred').textContent='unavailable: '+(c.error||r.status);return}
+  if(!c.linked){$('cred').innerHTML='<span class=warn>not linked</span>: on pc.0g.ai create a management key (mk-, scope account:read) and paste it above to see your credits go down here';$('credacct').textContent=$('credrecent').textContent='';return}
+  $('cred').innerHTML=`<span class=ok>${E(money(c.currency,c.total))}</span> left · credits ${E(money(c.currency,c.credit))} · deposit ${E(money(c.currency,c.deposit))}`;
+  $('credacct').innerHTML=`0G account ${E(c.address)} `+(c.is_you?'<span class=ok>= the wallet you signed in with</span>':'<span class=warn>≠ the wallet you signed in with</span>');
+  $('credrecent').innerHTML=c.recent.map(u=>`${E(u.t)} · ${E(u.request_id)} · ${E(u.model)} · −${E(money(c.currency,u.cost))} (credits ${E(money(c.currency,u.credit_used))})`).join('<br>');
+}
+$('f').onsubmit=async e=>{
+  e.preventDefault();$('msg').textContent='';
+  const r=await post('/api/account/key',{key:$('k').value.trim()});const b=await r.json();
+  $('msg').textContent=r.ok?'Saved'+(b.restarted?'; your robot is restarting with it.':'.'):b.error||('Refused ('+r.status+')');
+  $('msg').className=r.ok?'ok':'warn';if(r.ok)$('k').value='';load();cred().catch(()=>{});
+};
+const SCAN='https://sepolia.etherscan.io/';
+async function ens(){
+  const r=await api('/api/account/ens');const n=await r.json();
+  $('ensf').hidden=n.claimed;
+  if(!n.claimed){$('ens').innerHTML=`none yet: claim <i>name</i>.${E(n.parent)} for your robot`;$('ensrec').textContent='';return}
+  $('ens').innerHTML=`<a href="https://sepolia.app.ens.domains/${E(n.name)}" target="_blank" rel="noopener">${E(n.name)}</a> `+
+    (n.registered?'<span class=ok>resolves</span>':`<span class=warn>${E(n.error||'not resolving yet')}</span>`);
+  if(!n.registered)return;
+  $('ensrec').innerHTML=`resolver <a href="${SCAN}address/${E(n.resolver)}" target="_blank" rel="noopener">${E(n.resolver)}</a> · addr → robot ${E(n.robot)}<br>`+
+    Object.entries(n.texts).map(([k,v])=>`${E(k)} = ${E(v||'(empty)')}`).join('<br>')+'<br>robot may set: '+
+    Object.entries(n.robot_can_set).map(([k,v])=>`${E(k)} ${v?'<span class=ok>✓</span>':'<span class=warn>✗</span>'}`).join(' · ');
+}
+$('ensf').onsubmit=async e=>{
+  e.preventDefault();$('ensmsg').textContent='Claiming on Sepolia… about a minute.';$('ensmsg').className='';
+  const r=await post('/api/account/ens',{label:$('label').value.trim()});const b=await r.json();
+  $('ensmsg').innerHTML=r.ok?`Claimed. <a href="${SCAN}tx/${E(b.registerTx)}" target="_blank" rel="noopener">registration tx</a>`:E(b.error||('Refused ('+r.status+')'));
+  $('ensmsg').className=r.ok?'ok':'warn';ens().catch(()=>{});
+};
+$('logout').onclick=async()=>{try{await post('/api/logout')}finally{location.href='/'}};
+load();bal();cred().catch(()=>{});ens().catch(()=>{});setInterval(()=>ens().catch(()=>{}),20000);setInterval(()=>load().catch(()=>{}),3000);setInterval(()=>cred().catch(()=>{}),10000);
+</script>

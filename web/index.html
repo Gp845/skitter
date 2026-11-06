@@ -96,6 +96,9 @@
   #recbtn.on{background:var(--red);border-color:var(--red);color:#fff}
   #recbtn.on:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#fff;margin-right:7px;animation:blink 1s infinite}
   #patrol.on{border-color:#ff8a3d;color:#ff8a3d}
+  #nokey{max-width:1640px;margin:0 auto 6px;padding:10px 40px;color:#fff;background:var(--red);font:700 14px var(--sans)}
+  #nokey a{color:#fff}
+  nav.top a[hidden],#nokey[hidden]{display:none}
 
   @media (max-width:1200px){main{grid-template-columns:minmax(0,1fr) 360px;gap:30px;padding:12px 26px 48px}
     header{padding:18px 26px 42px}nav.top{right:26px}aside{padding-left:24px}.panel{gap:20px 24px}}
@@ -103,16 +106,17 @@
     aside{contain:none;min-height:0;border:0;padding:0}#feed{flex:none;height:440px}#secbox{flex:none;height:340px}}
 </style>
 <header>
-  <nav class="top"><a href="/">← Home</a><a href="/recordings">Recordings</a><button id="logout">Log out</button></nav>
+  <nav class="top"><a href="/">← Home</a><a href="/recordings">Recordings</a><a id="acctlink" href="/account" hidden>Account</a><button id="logout">Log out</button></nav>
   <div class="brand">
     <h1>Skit<b>ter</b></h1>
     <div class="tag">
       <div class="tag">Six-legged home security · on 0G</div>
       <div class="sub">Patrols your home, records it, and seals every frame on 0G. Ask it anything it sees.</div>
     </div>
-    <div class="meta"><span id="robot" class="pill"></span><span id="state" class="pill"></span></div>
+    <div class="meta"><span id="who" class="pill"></span><span id="robot" class="pill"></span><span id="state" class="pill"></span></div>
   </div>
 </header>
+<div id="nokey" hidden>No 0G API key on this robot yet: add yours in <a href="/account">Account</a>. Patrol, REC and E-STOP work now; spoken and typed commands need the key.</div>
 <main>
   <section class="stage">
     <div class="frame"><img id="cam" alt="Skitter's camera view"><div class="label"><i></i>LIVE · CAM</div></div>
@@ -132,7 +136,7 @@
       </div>
       <div class="group">
         <div class="glabel">Episode</div>
-        <div class="row"><button id="endep" class="ghost">End episode → 0G Storage</button><span id="spend" class="pill"></span></div>
+        <div class="row"><button id="endep" class="ghost">End episode → 0G Storage</button><span id="spend" class="pill"></span><a id="credits" class="pill" href="/account" hidden></a></div>
         <div id="pose"></div>
       </div>
     </div>
@@ -160,6 +164,8 @@ const loop=(fn,ms)=>{const go=async()=>{try{await fn()}catch(e){}setTimeout(go,m
 loop(async()=>{
   const s=await (await api('/api/status')).json();
   $('robot').textContent=s.name;$('state').textContent=s.state;$('state').className='pill '+s.state;
+  if(s.account){$('acctlink').hidden=false;$('who').textContent=s.account==='owner'?'owner':s.account.slice(0,6)+'…'+s.account.slice(-4)}
+  $('nokey').hidden=s.has_key!==false;
   $('spend').textContent='$'+s.spent_usd.toFixed(3)+' / $'+s.cap_usd.toFixed(2);
   $('blocked').innerHTML=`blocked <b>${+s.blocked||0}</b>`;
   const r=s.robot;$('pose').textContent=`x=${r.x.toFixed(2)} y=${r.y.toFixed(2)} yaw=${(r.yaw*57.3).toFixed(0)}°`+(r.tilt_deg!==undefined?` tilt=${r.tilt_deg.toFixed(1)}°`:'');
@@ -183,6 +189,7 @@ loop(async()=>{
   const d=await (await api('/api/events?since='+since)).json();since=d.next;
   for(const e of d.events){
     const t=new Date(e.t*1000).toLocaleTimeString();
+    if(['stt','decision','alert'].includes(e.type)&&Date.now()/1000-e.t<15)[1500,6000].forEach(ms=>setTimeout(()=>credits().catch(()=>{}),ms));  // 0G charges land a few s after the reply
     if(SEC[e.type]){
       const [lv,msg]=SEC[e.type](e),s=document.createElement('div');s.className='sl';
       s.innerHTML=`<span class=t>${t}</span><span class="lv ${esc(lv)}">${esc(lv).toUpperCase()}</span>${esc(msg)}`;$('sec').prepend(s);
@@ -217,6 +224,14 @@ async function feedPoll(){
   $('patrol').classList.toggle('on',!!f.patrol);$('patrol').textContent=f.patrol?'Patrolling… (E-STOP ends)':'Start patrol';
 }
 loop(feedPoll,2000);
+// the account's own 0G Private Computer balance (hub only; needs a management key on /account)
+async function credits(){
+  const r=await api('/api/account/credits'),c=r.ok?await r.json():{};
+  $('credits').hidden=!c.linked;if(!c.linked)return;
+  const m=v=>c.currency==='usd'?'$'+v.toFixed(4):v.toFixed(5)+' 0G',u=c.recent[0];
+  $('credits').textContent='0G credits '+m(c.total)+(u?' · last −'+m(u.cost)+' '+u.request_id:'');
+}
+loop(credits,20000);
 $('recbtn').onclick=async()=>{await post('/api/feed/'+(feedOn?'stop':'start'));feedPoll().catch(()=>{})};
 $('patrol').onclick=async()=>{await post('/api/patrol');feedPoll().catch(()=>{})};
 $('send').onclick=send;$('txt').onkeydown=e=>{if(e.key==='Enter')send()};

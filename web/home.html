@@ -208,7 +208,7 @@ function buildPlaces(){
     grp.userData.i=i;
     places.push({p,i,a,grp,card,mat,barMat,lamp,glow:0,lit:false,
       path:new THREE.Vector3(R_PATH*Math.cos(a),0,R_PATH*Math.sin(a))});
-    const li=document.createElement('li');li.textContent=p.k.toUpperCase();li.onclick=()=>show(i);
+    const li=document.createElement('li');li.textContent=p.k.toUpperCase();li.onclick=()=>visit(i);
     document.getElementById('list').appendChild(li);places[i].li=li;
   });
   document.getElementById('total').textContent=N;
@@ -222,24 +222,29 @@ function show(i){
   document.getElementById('pd').textContent=s.lit?s.p.d:'';
 }
 function light(s){
-  if(s.lit)return;s.lit=true;s.li.classList.add('lit');show(s.i);
+  if(s.lit)return;s.lit=true;s.li.classList.add('lit');
+  if(performance.now()-pinT>20000||s.i===bot.target)show(s.i);
   document.getElementById('count').textContent=places.filter(x=>x.lit).length;
 }
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();let downXY=null;
-function pick(e){  // place under the pointer: any part of it, or the floor within 1 m of it; or a staircase {climb}
+function pick(e){  // place card or staircase under the pointer ({climb}); the floor around them doesn't count
   mouse.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(mouse,camera);
   const hit=ray.intersectObjects([...places.map(s=>s.grp),...CLIMBS.filter(c=>c.grp).map(c=>c.grp),ground],true)[0];
-  if(!hit)return null;
-  for(let o=hit.object;o;o=o.parent){if(o.userData.i!==undefined)return places[o.userData.i];if(o.userData.c)return {climb:o.userData.c};}
-  let best=null,bd=1;
-  for(const s of places){const d=s.grp.position.distanceTo(hit.point.setY(0));if(d<bd){bd=d;best=s;}}
-  return best;
+  for(let o=hit?.object;o;o=o.parent){if(o.userData.i!==undefined)return places[o.userData.i];if(o.userData.c)return {climb:o.userData.c};}
+  return null;
+}
+let pinT=-1e9;  // a place the user picked keeps the panel until Skitter gets there
+function visit(i){
+  show(i);pinT=performance.now();
+  if(bot.goal||!robot?.parent)return;
+  Object.assign(bot,{target:i,mode:'walk'});userT=-1e9;
 }
 canvas.addEventListener('pointerdown',e=>downXY=[e.clientX,e.clientY]);
-canvas.addEventListener('pointermove',e=>{if(e.buttons)return;const s=pick(e);canvas.style.cursor=s?'pointer':'';});
+canvas.addEventListener('pointermove',e=>{if(e.buttons)return;const s=pick(e);canvas.style.cursor=s?'pointer':'';
+  if(s)userT=Math.max(userT,performance.now()-2500);});  // hold the camera still under the cursor so the target doesn't slide away
 canvas.addEventListener('click',e=>{
   if(!downXY||Math.hypot(e.clientX-downXY[0],e.clientY-downXY[1])>5)return;
-  const s=pick(e);if(s?.climb)mission(s.climb.key);else if(s)show(s.i);else panel.classList.remove('on');
+  const s=pick(e);if(s?.climb)mission(s.climb.key);else if(s)visit(s.i);else panel.classList.remove('on');
 });
 
 // ---------- props (kept off the walking loop: it runs between r=1.34 and r=1.45) ----------
@@ -400,7 +405,7 @@ function wake(){
   beam.lookAt(spot.target.getWorldPosition(new THREE.Vector3()));
   const ff=+Q.get('ff')||0;  // ?ff=60 skips ahead 60 s (screenshots)
   if(Q.get('go'))mission(Q.get('go'));
-  for(let i=0;i<ff*30;i++)drive(1/30);
+  for(let i=0;i<ff*30&&places.length;i++)drive(1/30);  // the robot can load before the fonts that build the places
   aim();camera.position.copy(camGoal);controls.target.copy(lookGoal);
   const load=document.getElementById('load');load.style.opacity=0;setTimeout(()=>load.remove(),900);
 }

@@ -52,18 +52,19 @@ def step_vector(mount_deg, vx, wz):
     return sx * STEP_LENGTH, sy * STEP_LENGTH
 
 
-def foot_target(phase, step):
-    """Foot position in the leg frame for a gait phase in [0, 1)."""
+def foot_target(phase, step, pose=(BODY_HEIGHT, NEUTRAL_REACH, STEP_HEIGHT)):
+    """Foot position in the leg frame for a gait phase in [0, 1); pose = (body height, reach, step lift)."""
     sx, sy = step
+    height, reach, step_h = pose
     if phase < 1 - DUTY:  # swing: move foot forward along step, lifted
         s = phase / (1 - DUTY)
         k = s - 0.5
-        lift = STEP_HEIGHT * math.sin(math.pi * s)
+        lift = step_h * math.sin(math.pi * s)
     else:  # stance: foot pushes back, body moves along step
         s = (phase - (1 - DUTY)) / DUTY
         k = 0.5 - s
         lift = 0.0
-    return NEUTRAL_REACH + k * sx, k * sy, -BODY_HEIGHT + lift
+    return reach + k * sx, k * sy, -height + lift
 
 
 HIP_R = 0.109                      # hip distance from the body centre (measured in sim)
@@ -73,6 +74,7 @@ BELLY_SIDE = (-0.12, 0.16)         # same along body y, for climbing sideways
 BELLY_CLEAR = 0.045                # min body_z above the ground under the belly
 MAX_EXT = 0.125                    # max hip-to-foot drop the legs can hold (IK reach ~0.18 m)
 STAIR_CLEAR = 0.025                # swing foot clears the higher of take-off/landing ground by this much
+EDGE_MARGIN = 0.03                 # feet land at least this far from a riser edge
 
 
 def _smooth(u):
@@ -104,7 +106,8 @@ class StairGait:
         self.dir, self.belly = (90, BELLY_SIDE) if sideways else (0, BELLY)
         self.foot_x = {leg: (_body_y if sideways else _body_x)(leg, *self.target[leg]) for leg in LEGS}
 
-    def joint_targets(self, s, wz=0.0):
+    def joint_targets(self, s, wz=0.0, vy=0.0):
+        """vy: sidestep to the left of the climbing direction, in [-1, 1] of a step."""
         sl = self.speed * STEP_LENGTH
         if self.walking or self.tick % CYCLE_STEPS:
             self.tick += 1  # like the flat gait: finish the cycle before standing
@@ -116,6 +119,8 @@ class StairGait:
         targets = {}
         for k, (leg, (coxa, femur, tibia, mount, tarsus)) in enumerate(LEGS.items()):
             sx, sy = step_vector(mount + self.dir, self.speed, wz)
+            b = math.radians(mount + self.dir + 90)
+            sx, sy = sx + vy * STEP_LENGTH * math.cos(b), sy + vy * STEP_LENGTH * math.sin(b)
             phase = (self.tick / CYCLE_STEPS + TRIPOD_PHASE[k]) % 1.0
             nx, ny = self.cur[leg]
             if not (self.walking or self.tick % CYCLE_STEPS):
@@ -123,9 +128,12 @@ class StairGait:
             elif phase < 1 - DUTY:  # swing: up, over, down
                 if not self.swinging[leg]:
                     self.swinging[leg] = True
-                    self.prev[leg], self.cur[leg] = self.cur[leg], self.target[leg]
+                    x = s + self.foot_x[leg] + 1.5 * sl  # body moves sl while it swings
+                    adj, a = self._off_edge(x), math.radians(mount + self.dir)
+                    tx, ty = self.target[leg]
+                    self.prev[leg], self.cur[leg] = self.cur[leg], (tx + adj * math.cos(a), ty + adj * math.sin(a))
                     self.lift[leg] = self.g[leg]
-                    self.land[leg] = self.ground(s + self.foot_x[leg] + 1.5 * sl)  # body moves sl while it swings
+                    self.land[leg] = self.ground(x + adj)
                 u = phase / (1 - DUTY)
                 (px, py), (cx, cy), b = self.prev[leg], self.cur[leg], _smooth(u)
                 nx, ny = px + (cx - px) * b, py + (cy - py) * b
@@ -140,6 +148,12 @@ class StairGait:
             t1, t2, t3 = ik(nx + kx * sx, ny + kx * sy, zw - self.body_z)
             targets[coxa], targets[femur], targets[tibia], targets[tarsus] = t1, t2, t3, 0.0
         return targets
+
+    def _off_edge(self, x, m=EDGE_MARGIN):
+        """Foothold shift (|shift| <= m) so a foot landing at x stays m from a nosing: on one, going down, it slips."""
+        g0 = self.ground(x - m)
+        e = next((x - m + 0.005 * i for i in range(1, int(2 * m / 0.005) + 1) if self.ground(x - m + 0.005 * i) != g0), None)
+        return 0.0 if e is None else (e - m) - x if x < e else (e + m) - x
 
 
 def _body_x(leg, lx, ly):
@@ -167,27 +181,45 @@ def narrow_neutral(leg, half_width):
     return dx * math.cos(a) - dy * math.sin(a), dx * math.sin(a) + dy * math.cos(a)
 
 
+STAND = (BODY_HEIGHT, NEUTRAL_REACH, STEP_HEIGHT)
+CROUCH = (0.05, 0.18, 0.025)  # walking top 16.7 -> 14.4-14.9 cm (the knees set it); legs spread to ~50 cm wide
+SPEEDS = (50, 300)            # set_speed percent; 100 = ~10 cm/s, 300 = ~30 cm/s (above: foot slip, turn overshoot)
+
+
 class Gait:
     def __init__(self):
-        self.tick = 0
+        self.phase = 0.0
         self.vx = 0.0
         self.wz = 0.0
+        self.crouch = False
+        self.pose = STAND
+        self.set_speed(100)
+
+    def set_speed(self, percent):
+        """Percent of the default walk: step frequency up to 2x (faster slips), the rest from a longer stride."""
+        self.percent = min(max(percent, SPEEDS[0]), SPEEDS[1])
+        self.rate = min(self.percent / 100, 2.0)
+        self.stride = self.percent / 100 / self.rate
 
     def joint_targets(self, cmd_vx, cmd_wz):
         """Advance one sim step; return {joint_name: angle}."""
         # low-pass the command so direction changes don't jerk the legs
         self.vx += 0.02 * (cmd_vx - self.vx)
         self.wz += 0.02 * (cmd_wz - self.wz)
+        self.pose = tuple(a + 0.02 * (b - a) for a, b in zip(self.pose, CROUCH if self.crouch else STAND))
         moving = abs(self.vx) > 0.02 or abs(self.wz) > 0.02
-        if moving or self.tick % CYCLE_STEPS:
-            self.tick += 1  # finish the current cycle before standing still
+        if moving or self.phase:  # finish the current cycle before standing still
+            self.phase += self.rate / CYCLE_STEPS
+            if self.phase >= 1.0:
+                self.phase = self.phase - 1.0 if moving else 0.0
         targets = {}
         for k, (leg, (coxa, femur, tibia, mount, tarsus)) in enumerate(LEGS.items()):
-            if moving or self.tick % CYCLE_STEPS:
-                phase = (self.tick / CYCLE_STEPS + TRIPOD_PHASE[k]) % 1.0
-                x, y, z = foot_target(phase, step_vector(mount, self.vx, self.wz))
+            if moving or self.phase:
+                phase = (self.phase + TRIPOD_PHASE[k]) % 1.0
+                sx, sy = step_vector(mount, self.vx, self.wz)
+                x, y, z = foot_target(phase, (sx * self.stride, sy * self.stride), self.pose)
             else:
-                x, y, z = NEUTRAL_REACH, 0.0, -BODY_HEIGHT
+                x, y, z = self.pose[1], 0.0, -self.pose[0]
             t1, t2, t3 = ik(x, y, z)
             targets[coxa], targets[femur], targets[tibia], targets[tarsus] = t1, t2, t3, 0.0
         return targets

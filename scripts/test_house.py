@@ -1,5 +1,7 @@
 """Skitter's house world: spawn free, doorways >= 0.8 m with no thresholds, hallway >= 1.0 m, steps climbable,
-person path clear, nothing through walls. Renders docs/house_top.png, house_view.png, house_robot.png. No 0G calls."""
+loft stairs 9 x 6 cm (30 cm wide, 1 m landings), vent lower than walking Skitter but above crouched, loft rooms
+walled in, person path clear, nothing through walls. Renders docs/house_top.png, house_view.png, house_robot.png.
+No 0G calls."""
 import math
 import os
 import sys
@@ -83,6 +85,33 @@ print(f"steps: risers at x={risers[0][0]:.2f}, {risers[1][0]:.2f} (+x), heights 
       f"landing {landing:.2f} m deep at 12 cm, porch bump {porch * 100:.1f} cm")
 assert tread >= 0.55 and width >= 0.6 and landing >= 0.55 and porch < 0.005
 
+ys = np.arange(3.0, 9.6, 0.01)  # loft stairs, along their axis
+hs = [height(house.STAIR_X, y) for y in ys]
+risers = [(ys[i], hs[i] - hs[i - 1]) for i in range(1, len(ys)) if abs(hs[i] - hs[i - 1]) > 0.005]
+assert len(risers) == 9 and all(abs(r - 0.06) < 0.003 for _, r in risers) and abs(hs[-1] - house.LOFT_Z) < 0.003, risers
+gaps = [round(float(risers[i][0] - risers[i - 1][0]), 2) for i in range(1, 9)]
+widths = [sum(abs(height(x, y + 0.2) - h) < 0.003 for x in np.arange(-5.5, -3.5, 0.01)) * 0.01
+          for (y, _), h in zip(risers, np.arange(1, 10) * 0.06)]
+print(f"loft stairs: 9 risers of 6 cm at y={[round(float(y), 2) for y, _ in risers]}, spacing {gaps} m, "
+      f"tread widths {[round(float(w), 2) for w in widths]} m, loft at {hs[-1] * 100:.0f} cm")
+assert all(g in (0.55, 1.0) for g in gaps) and all(abs(w - 0.3) < 0.02 for i, w in enumerate(widths) if i % 3 != 2)
+assert all(w >= 0.95 for w in widths[2:8:3]), "landings 1 m wide"
+vent_top = p.rayTest([3.4, 4.5, 0.01], [3.4, 4.5, 1.0])[0][3][2]
+vent_w = ray_len([3.4, 4.5, 0.08], [3.4, 2.5, 0.08]) + ray_len([3.4, 4.5, 0.08], [3.4, 6.5, 0.08])
+duct = [x for x in np.arange(2.5, 4.3, 0.01) if ray_len([x, 4.5, 0.01], [x, 4.5, 1.0]) < 0.25]
+print(f"vent: {vent_top * 100:.1f} cm high, {vent_w:.2f} m wide, duct x {duct[0]:.2f}..{duct[-1]:.2f} "
+      f"(Skitter 16.7 cm walking, 14.9 crawling: test_vent)")
+assert 0.15 < vent_top < 0.167 and vent_w >= 0.65 and duct[-1] - duct[0] > 0.9
+for name, (rx0, ry0, rx1, ry1, rz, _) in house.ROOMS.items():
+    if rz:
+        cx, cy = (rx0 + rx1) / 2, (ry0 + ry1) / 2
+        assert abs(height(cx, cy) - rz) < 0.01 and house.room_at(cx, cy, rz) == name, name
+        edge = [(x, y) for x in np.arange(rx0, rx1, 0.02) for y in (ry0, ry1)] + \
+               [(x, y) for y in np.arange(ry0, ry1, 0.02) for x in (rx0, rx1)]
+        low = [(round(x, 2), round(y, 2)) for x, y in edge if height(x, y) < rz - 0.001]
+        assert not low, f"{name} has an open edge (no wall, no floor) at {low[:5]}"
+print(f"loft rooms {[n for n, r in house.ROOMS.items() if r[4]]} at {house.LOFT_Z * 100:.0f} cm, walled in")
+
 (ax, ay), (bx, by) = PERSON_PATH
 for f in np.linspace(0, 1, 11):
     x, y = ax + (bx - ax) * f, ay + (by - ay) * f
@@ -110,8 +139,8 @@ def shot(fname, eye, target, up, fov, size=(1024, 768), near=0.1, far=80):
     Image.fromarray(np.reshape(img, (h, w, 4))[:, :, :3].astype(np.uint8)).save(os.path.join(ROOT, "docs", fname))
 
 
-shot("house_top.png", [4.7, 1.8, 60], [4.7, 1.8, 0], [0, 1, 0], 12.5, near=50, far=61)
-shot("house_view.png", [11.5, -9.5, 12], [3.0, 1.5, 0], [0, 0, 1], 55)
+shot("house_top.png", [3.2, 4.5, 60], [3.2, 4.5, 0], [0, 1, 0], 17, near=50, far=61)
+shot("house_view.png", [11.5, -9.5, 12], [1.0, 3.5, 0], [0, 0, 1], 60)
 shot("house_robot.png", [0, 0, 0.17], [1, 0, 0.17], [0, 0, 1], 70, size=(320, 240), near=0.02, far=10)
 print("rendered docs/house_top.png, docs/house_view.png, docs/house_robot.png")
 p.disconnect()

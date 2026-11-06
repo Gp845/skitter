@@ -178,6 +178,10 @@ class Feed:
                     c["chain_tx"] = reg.get("registryTx")
                 self._set(c, status="on chain", error=None)
                 self._emit("feed", msg=f"clip {c['seq']} sealed, stored on 0G and registered on chain", root=c["root"])
+                if ens := ep.ens_publish(c["root"], f"clip {c['seq']}, {c['detections']} detections"):
+                    self._set(c, ens_tx=ens.get("ensTx"))
+                    self._emit("feed", **({"level": "warn"} if "ens_error" in ens else {}),
+                               msg=f"clip {c['seq']} ENS: {ens.get('ens_error') or ens['name'] + ' updated'}")
             except Exception as e:
                 if self._on_chain(c):  # tx landed but the receipt fetch failed (flaky RPC)
                     self._set(c, status="on chain", error=None)

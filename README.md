@@ -178,6 +178,71 @@ from speech, model output or signs in the camera image can't inject script into 
 
 Keys live only in `.env` (git-ignored). Back up `EPISODE_KEY`: without it, your own episodes cannot be opened.
 
+## Accounts: one robot per wallet (`python hub.py`)
+
+`python hub.py --port 3000` runs Skitter for many people. Anyone who signs in with an EVM wallet (the same signed
+challenge as above) gets an account and **their own robot**: a separate simulator process (`python run.py`) on a
+private `127.0.0.1` port. The password (`SKITTER_PASSWORD`) and `OWNER_WALLETS` open the **owner** account, which runs
+on the server's own `.env` keys and `episodes/`.
+
+- **Own 0G identity.** At sign-up the hub generates a **robot wallet** for the account. Its clips are uploaded and
+  registered on chain by that wallet, so ownership shows on chain per wallet. The account also gets its own random
+  `EPISODE_KEY`, and the user pastes their own **0G Compute API key** on `/account`, which also shows the robot
+  wallet, its balance and a link to the [faucet](https://faucet.0g.ai). Until a key is set, the robot patrols and
+  records, but spoken and typed commands safe-stop with "add your 0G API key" and make no network call.
+- **Sealed at rest.** The robot wallet key, `EPISODE_KEY` and API key are stored in `accounts/<address>/account.json`,
+  encrypted with AES-256-GCM under `ACCOUNTS_KEY` and bound to the address. If `ACCOUNTS_KEY` is missing, one is
+  generated into `.env` on first start; the hub refuses to start if it can't open an existing account. The private
+  key and API key are never sent to the browser (only the API key's last 4 characters are shown).
+- **Isolation.** The hub reverse-proxies `/app`, `/recordings` and `/api/*` to the robot of the session's account.
+  Robots accept only requests carrying their per-process hub secret and have no login of their own. The control token
+  is per account and is checked by both the hub and the robot. Host and Origin checks apply as before. Each robot keeps
+  its episodes, clips, spend ledger and map in `SKITTER_HOME=accounts/<address>/`, so recordings are per account.
+- **Limits.** At most `MAX_ROBOTS` (default 3) robots run at once; when they're all in use, the page says so. A robot
+  starts on the account's first visit to the control room and stops after `ROBOT_IDLE_S` (default 900 s) without
+  requests. Sessions expire after 12 h. E-STOP needs no token: with a session it stops your robot; without one it
+  does nothing (a stranger must not stop everyone else's).
+- **Your own 0G credits (iAI).** Inference runs on [0G Private Computer](https://pc.0g.ai) with the account's own
+  `sk-` key, so it spends that 0G account's balance, including the daily credits from staked
+  [iAI](https://0g.ai/blog/introducing-infinite-ai). The router has no OAuth: reading the balance needs a separate
+  read-only **management key** (`mk-`, scope `account:read`, created on pc.0g.ai). Paste it in the same box on
+  `/account`; it is sealed like the API key and is not passed to the robot. `/account` then shows credits and deposit
+  from [`GET /v1/account/balance`](https://0gfoundation.github.io/0g-router/), whether that 0G account is the wallet you
+  signed in with, and the last charged requests from `/v1/account/usage/history` (request id, model, cost). The control
+  room shows the balance and the last request id, and refreshes it after each decision. The owner account uses
+  `OG_MGMT_KEY` from `.env`.
+
+Checked by `python scripts/test_accounts.py` (38 checks, real robot processes, no 0G calls) and
+`python scripts/test_credits.py` (17 checks against a mock router).
+
+## ENS: every robot is an agent namespace (ENSv2, Sepolia)
+
+Each robot gets its own name, like `home.skitter.eth`, which serves as its identity and as a live pointer to its
+latest tape. The name belongs to the account's wallet. The robot can only update its own status records.
+
+- **Own subname registry.** `skitter.eth` was registered through the ENSv2 `ETHRegistrar`, and its subregistry is a
+  `UserRegistry` proxy deployed through the `VerifiableFactory`
+  ([`0x1c3c…945E`](https://sepolia.etherscan.io/address/0x1c3c7629ec82Dc42ec1f457946F1DB89F570945E)). The hub holds
+  `ROLE_REGISTRAR` on that registry and mints `<label>.skitter.eth` to the wallet that signed in. You pick the label on
+  `/account`. The name owner gets the same name roles as with a `.eth` name: resolver, subregistry and transfer.
+- **A Permissioned Resolver per robot.** Each name gets its own resolver proxy. Argument-scoped roles apply to every
+  name on a resolver, so a separate resolver is what keeps one robot's rights off every other robot's name. The
+  account wallet holds every role and every admin role. The robot wallet's `addr` record is set, and
+  `grantSetterRoles` (Enhanced Access Control) gives the robot `ROLE_SET_TEXT` on only two keys: `skitter.episode` and
+  `skitter.status`. The hub needs `ROLE_SET_TEXT_ADMIN` for that one transaction, then revokes it from itself in the
+  same transaction.
+- **The robot writes its own record.** After each clip or episode is sealed, stored on 0G and registered, the robot
+  signs a `setText` multicall with its own wallet. It sets `skitter.episode` to the 0G root hash and `skitter.status`
+  to what happened. The hub tops the robot wallet up once, with 0.005 Sepolia ETH. Anyone can follow a robot's latest
+  tape by name and fetch it from 0G Storage with `node storage/download.mjs <root>`.
+- **Live on `/account`.** The page resolves the name through the Universal Resolver every 20 s. It shows the resolver,
+  the `addr` record, the text records, and which keys the robot wallet may set: ✓ for its two keys, ✗ for `avatar` and
+  `url`, all read on chain with `hasRoles`.
+
+`node storage/ens.mjs setup | claim <label> <owner> <robot> | record <name> <json> | read <name>`. Checked by
+`python scripts/test_ens.py` (10 checks, live on Sepolia, about 0.001 ETH per run). A fresh account claims a name. The
+name resolves. The robot publishes a root. The robot is refused `avatar`. The hub can't write the robot's records.
+
 ## Prize requirements
 
 - **0G call in the decision loop:** every action comes from a 0G Compute tool call; its `request_id` is shown in the UI and logged.
@@ -227,7 +292,9 @@ python audit.py 0x<rootHash>     # Storage proof + privacy + Chain entry + 0G re
 ```
 
 Tests (no 0G calls, no cost): `python scripts/test_executor.py` (15 safety/behaviour tests),
-`python scripts/test_security.py` (38 login, wallet, API lock-down and sealing tests), `python scripts/test_replay.py`,
+`python scripts/test_security.py` (38 login, wallet, API lock-down and sealing tests),
+`python scripts/test_accounts.py` (38 hub tests: sign-up, sealed secrets, per-account robots, isolation, caps),
+`python scripts/test_replay.py`,
 `python scripts/test_skills.py`, `python scripts/test_stairs.py`, `python scripts/test_house.py`,
 `python scripts/test_feed.py` (house patrol while recording; hash chain, frames, person detection; `--upload` also
 seals, uploads and verifies one clip on testnet),
@@ -237,6 +304,7 @@ seals, uploads and verifies one clip on testnet),
 
 ```
 run.py                       start Skitter (sim + web UI)
+hub.py                       many accounts, one robot process each (cortex/core/accounts.py)
 replay.py                    download + deterministic replay of an episode
 audit.py                     one-command audit of an episode from its root hash (no wallet needed)
 cortex/core/                 the brain: 0G client, planner, executor (leases, safe-stop, memory, map), episodes, server

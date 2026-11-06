@@ -11,7 +11,9 @@ import time
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 
+from .house_map import HouseMap
 from .og_client import OGError
+from .planner import go_to_spec
 from .safety import Reject, is_stop_reflex, validate
 
 PREFETCH_S = 4.0     # ask for the next decision when this much lease is left
@@ -31,6 +33,7 @@ class Executor:
         self.max_lease = adapter.manifest().get("safety", {}).get("max_lease_s", 3.0)
         self.memory = deque(maxlen=6)  # earlier commands this session, so follow-ups ("go back") have context
         self.objects = {}              # label -> world (x, y), from boxes the model reported + the robot's depth
+        self.map = HouseMap.load()     # made by Runtime.explore(); None until the house was explored
 
     # ---- helpers ----
     def _emit(self, type_, **kw):
@@ -47,14 +50,20 @@ class Executor:
         self._estop.set()
         self.adapter.stop()
 
-    def _map(self, sightings):
+    def _map(self, sightings, session=True):
+        """session=False: house map only (exploration), not this session's known_objects."""
         for s in sightings:
             try:
                 xy = self.adapter.locate({k: min(max(float(s[k]), 0), 1000) for k in ("x1", "y1", "x2", "y2")})
             except Exception:  # model output is untrusted; a bad box just isn't mapped
                 continue
             if xy:
-                self.objects[str(s.get("label", "?")).strip().lower()[:40]] = xy
+                label = str(s.get("label", "?")).strip().lower()[:40]
+                if session:
+                    self.objects[label] = xy
+                if self.map:
+                    st = self.adapter.state()
+                    self.map.add_object(label, *xy, self.map.level_at(st["x"], st["y"], st.get("z", 0)))
 
     def _known(self, st):
         """Map entries relative to the robot now: what the model needs to pick the shortest turn."""
@@ -70,6 +79,8 @@ class Executor:
         frame, st = self.adapter.get_frame(), self.adapter.state()
         if self.objects and "yaw" in st:
             st["known_objects"] = self._known(st)
+        st["map"] = (self.map.summary(st["x"], st["y"], st.get("z", 0)) if self._places() else
+                     "none yet: the house has not been explored, so go_to is not available")
         # a frame only goes stale if the robot moves while 0G thinks; standing still, any latency is fine
         return self._pool.submit(self.planner.decide, instruction, frame, st, list(history), list(self.memory)), \
             time.monotonic() if moving else None
@@ -78,10 +89,91 @@ class Executor:
         st = self.adapter.state()
         return {k: round(st[k], 2) for k in ("x", "y", "yaw") if k in st}
 
+    def _places(self):
+        return self.map.places() if self.map else []
+
+    def _manifest(self):
+        m = self.adapter.manifest()
+        return {**m, "actions": m["actions"] + [go_to_spec(self._places())]} if self._places() else m
+
+    # ---- driving (shared by go_to, the patrol and exploration; all run on the sim thread) ----
+    def wait(self, timeout_s):
+        """Step the sim until the current skill finishes: "done", "timeout" (sim time), or why it must stop."""
+        last, end = time.monotonic(), self.adapter.t + timeout_s * 240  # sim steps: the sim runs slower than real time
+        while self.adapter.busy():
+            now = time.monotonic()
+            self.adapter.step(min(now - last, MAX_DT))
+            last = now
+            self.on_tick()
+            if self._estop.is_set():
+                self.adapter.stop()
+                return "stopped by E-STOP or a new command"
+            if self.adapter.state().get("fallen"):
+                self.adapter.stop()
+                return "robot fell"
+            if self.adapter.t > end:
+                self.adapter.stop()
+                return "timeout"
+            time.sleep(0.005)
+        return "done"
+
+    def _turn(self, err_deg):
+        self.adapter.execute("turn", {"direction": "left" if err_deg > 0 else "right",
+                                      "degrees": min(max(abs(err_deg), 10), 180)}, 30)
+        return self.wait(30)
+
+    def drive_to(self, x, y, tol=0.15, how="walk"):
+        """Turn + walk legs to (x, y): reached | blocked | timeout | why it had to stop."""
+        crawl = how == "crawl" and any(a["name"] == "crawl" for a in self.adapter.manifest()["actions"])
+        for _ in range(40):
+            st = self.adapter.state()
+            dx, dy = x - st["x"], y - st["y"]
+            err = math.degrees(math.atan2(math.sin(math.atan2(dy, dx) - st["yaw"]), math.cos(math.atan2(dy, dx) - st["yaw"])))
+            if math.hypot(dx, dy) <= tol:
+                return "reached"
+            if abs(err) > 8:
+                why = self._turn(err)
+            else:
+                self.adapter.execute("crawl" if crawl else "walk",
+                                     {"direction": "forward", "distance_cm": min(math.hypot(dx, dy) * 100, 150)}, 30)
+                why = self.wait(30)
+                if why == "done" and self.adapter.result() == "blocked":
+                    return "blocked"
+            if why != "done":
+                return why
+        return "timeout"
+
+    def climb(self, params):
+        """Stairs: optional params["yaw"] (world heading, rad) to face first; the rest goes to the climb skill."""
+        params = dict(params)
+        yaw = params.pop("yaw", None)
+        if yaw is not None:
+            err = math.degrees(math.atan2(math.sin(yaw - self.adapter.state()["yaw"]), math.cos(yaw - self.adapter.state()["yaw"])))
+            why = self._turn(err) if abs(err) > 8 else "done"
+            if why != "done":
+                return why
+        self.adapter.execute("climb", params, 120)
+        why = self.wait(120)
+        return self.adapter.result() if why == "done" else why
+
+    def go_to(self, place):
+        """Follow the mapped route leg by leg: reached | no_route | blocked | timeout | a climb refusal | stop reason."""
+        st = self.adapter.state()
+        legs = self.map.route(st["x"], st["y"], st.get("z", 0), place) if self.map else None
+        if legs is None:
+            return "no_route"
+        for how, k, params in legs:
+            res = self.climb(params) if how == "climb" else self.drive_to(self.map.nodes[k]["x"], self.map.nodes[k]["y"], how=how)
+            if res != "reached":
+                return res
+        return "reached"
+
     # ---- main entry ----
     def run_task(self, instruction: str) -> str:
         before, history = self._pose(), []
         out = self._run(instruction, history)
+        if self.map:  # objects the model reported during the task
+            self.map.save()
         self.memory.append(f'"{instruction}": {"; ".join(history) or "no action"} -> {out[:80]} '
                            f"(pose before {before}, after {self._pose()})")
         return out
@@ -166,9 +258,18 @@ class Executor:
                     self._emit("task_end", outcome=d.name, detail=d.args)
                     return f"{d.name}: {d.args}"
                 try:
-                    name, args = validate(self.adapter.manifest(), d.name, d.args)
+                    name, args = validate(self._manifest(), d.name, d.args)
                 except Reject as e:
                     return self._safe_stop(f"rejected model output: {e}")
+                if name == "go_to":  # runs to the end here (E-STOP / fall checked every step), then re-ask
+                    self.state = "ACTING"
+                    history.append(f"go_to {args}")
+                    self._emit("action", name=name, args=args, lease_s=0)
+                    res = self.go_to(args["place"])
+                    history[-1] += f" => {res}"
+                    self._emit("action_done", result=res)
+                    last = time.monotonic()
+                    continue
                 spec = next(a for a in self.adapter.manifest()["actions"] if a["name"] == name)
                 goal = bool(spec.get("goal"))
                 lease = (spec.get("timeout_s", 30.0) if goal

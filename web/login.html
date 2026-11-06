@@ -48,11 +48,12 @@
     <button id="go">Unlock</button>
     <div class="or">or</div>
     <button type="button" id="wallet" class="alt">Connect 0G wallet</button>
+    <div class="or">New wallet? Where sign-up is open, it gets its own robot.</div>
   </form>
 </main>
 <script>
 const n=new URLSearchParams(location.search).get('next');
-const next=n==='/recordings'?'/recordings':'/app';
+const next=['/recordings','/account'].includes(n)?n:'/app';
 const $=id=>document.getElementById(id);
 $('f').onsubmit=async e=>{
   e.preventDefault();$('err').textContent='';$('go').disabled=true;

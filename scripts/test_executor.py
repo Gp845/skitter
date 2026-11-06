@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+os.environ["SKITTER_HOME"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_no_map")  # never a real map
 from cortex.core.executor import Executor  # noqa: E402
 from cortex.core.og_client import OGError  # noqa: E402
 from cortex.core.planner import Decision  # noqa: E402

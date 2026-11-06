@@ -12,7 +12,7 @@ import time
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-EPISODES = ROOT / "episodes"
+EPISODES = pathlib.Path(os.environ.get("SKITTER_HOME") or ROOT / "episodes")  # per-account data dir under the hub
 STORAGE_DIR = ROOT / "storage"
 
 
@@ -113,6 +113,8 @@ class EpisodeManager:
                 result.update(_node("register.mjs", result["rootHash"], ep.id, result["decisions"], timeout=90))
             except Exception as e:  # the log is already safe on 0G Storage; only the on-chain index failed
                 result["register_error"] = str(e)
+        if result.get("rootHash"):
+            result.update(ens_publish(result["rootHash"], f"episode {ep.id}, {result['decisions']} decisions"))
         (ep.dir / "result.json").write_text(json.dumps(result, indent=2))
         self.uploads.append(result)
         return result
@@ -124,6 +126,19 @@ def _node(script, *args, timeout=240):
     if r.returncode != 0:
         raise RuntimeError((r.stderr or r.stdout).strip()[-500:])
     return json.loads(r.stdout.strip().splitlines()[-1])
+
+
+def ens_publish(root, status) -> dict:
+    """The robot writes its latest 0G root into its own ENS name (<label>.skitter.eth on Sepolia), signing with its
+    own wallet: its resolver role covers only these text keys. Best effort: storage and the 0G registry already hold it."""
+    f = EPISODES / "ens.json"  # written by the hub when the account claims a name
+    if not f.exists():
+        return {}
+    try:
+        return _node("ens.mjs", "record", json.loads(f.read_text())["name"],
+                     json.dumps({"skitter.episode": root, "skitter.status": status}), timeout=90)
+    except Exception as e:
+        return {"ens_error": str(e)[-200:]}
 
 
 def upload(path) -> dict:

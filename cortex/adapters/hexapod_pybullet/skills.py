@@ -18,6 +18,8 @@ BLOCK_DEPTH = 0.28    # m from camera: reflex stops forward motion (never steers
 FOOT_MARGIN = 0.03    # m between a foot and the side edge of a stair
 MIN_HALF = 0.08       # m: side feet can't tuck closer to the axis than this (hips sit 9.4 cm out) -> stairs >= 22 cm
 FOLLOW_GAP = 0.6      # m from camera: follow stands still (keeps watching) when the target is this close
+MIN_EDGE = 0.5        # m from body centre: nearer edges are below the camera's view (it sees floor from ~0.55 m)
+BACKUP = 0.35         # m climb backs off when the edge is nearer than MIN_EDGE (e.g. right after other stairs)
 
 
 def wrap(a):
@@ -37,16 +39,21 @@ class Skill:
         if kind in ("face", "approach", "follow"):
             self._init_tracker()
         if kind == "climb":
+            self.backup = None
             self._init_climb()
 
     # ---- stairs: known riser height, edge found by the depth camera ----
     def _init_climb(self):
         h, n, tread = self.p["step_height_cm"] / 100, int(self.p["steps"]), self.p["tread_cm"] / 100
-        found = self.bot.find_step()
+        down = self.p.get("direction", "up") == "down"
+        found = self.bot.find_step(down=down)
+        if (found is None or found[0] < MIN_EDGE) and self.backup is None:  # edge too close to see: back off once
+            self.backup, self.turning = "back", False
+            return
         if found is None:
             self.result = "no_step"
             return
-        edge, measured, square = found
+        edge, measured, square, self.offset = found
         self.climb_yaw = self.start_yaw + square  # climb square to the riser, not along wherever the turn ended
         if abs(measured - h) > 0.015:  # never climb with the wrong geometry
             self.result = f"height_mismatch (measured {measured * 100:.1f} cm)"
@@ -59,25 +66,28 @@ class Skill:
             if half < MIN_HALF or width < span + 2 * FOOT_MARGIN or h + BELLY_CLEAR > MAX_EXT:
                 self.result = "too_steep"
                 return
-            rear = half                     # rear-most foot sits half a stance behind the centre
+            rear, self.offset = half, 0.0   # rear-most foot sits half a stance behind the centre
         else:
             half = width / 2 - FOOT_MARGIN  # how far a foot may sit off the body axis
             if half < MIN_HALF:
                 self.result = "too_narrow"
                 return
             rear = -FOOT_X["L4"]
+        h = -h if down else h  # going down is the same gait on negative risers
         self.top = n * h
         self.end_s = edge + (n - 1) * tread + rear + 0.05  # rear foot 5 cm past the last nosing
         self.stair = StairGait(lambda x: h * min(n, int((x - edge) // tread) + 1) if x >= edge else 0.0,
                                half_width=half, sideways=self.side)
-        self.s, self.check, self.wz = 0.0, (0.0, self.bot.t), 0.0
+        self.s, self.check, self.wz, self.vy = 0.0, (0.0, self.bot.t), 0.0, 0.0
         self.turning = self.side
         self.heading = self.climb_yaw - (math.pi / 2 if self.side else 0.0)  # left side leads when crabbing
 
     def joint_targets(self):
+        if self.backup in ("back", "settle"):
+            return self.bot.gait.joint_targets(-1.0 if self.backup == "back" else 0.0, 0.0)
         if self.turning:
             return self.bot.gait.joint_targets(0.0, self.wz)
-        return self.stair.joint_targets(self.s, self.wz)
+        return self.stair.joint_targets(self.s, self.wz, self.vy)
 
     def _climb(self):
         pos, (roll, pitch, yaw) = self.bot.pose()
@@ -86,6 +96,13 @@ class Skill:
         # hold the start line: the gait drifts sideways, and stairs are only a little wider than the robot
         if math.degrees(max(abs(roll), abs(pitch))) > 20:
             return self._done("unstable")
+        if self.backup in ("back", "settle"):  # walk back, stand still a second, then measure the stairs again
+            if self.backup == "back" and -self.s >= BACKUP:
+                self.backup, self.check = "settle", ("settle", self.bot.t)
+            if self.backup == "settle" and self.bot.t - self.check[1] > 240 and not self.bot.gait.phase:
+                self.start_xy, self.start_yaw, self.backup = pos[:2], yaw, "done"
+                self._init_climb()
+            return 0.0, 0.0
         if self.turning:  # turn in place (flat gait) until side-on, then let the legs settle for a second
             err = wrap(self.heading - yaw)
             self.wz = max(-1.0, min(1.0, 2.5 * err)) if abs(err) > 0.03 else 0.0
@@ -94,15 +111,16 @@ class Skill:
             if self.check[0] == "settle" and self.bot.t - self.check[1] > 240:
                 self.turning, self.check = False, (self.s, self.bot.t)
             return 0.0, 0.0
-        lateral = -dx * math.sin(self.climb_yaw) + dy * math.cos(self.climb_yaw)  # + = left of the line
-        want = self.heading - max(-0.3, min(0.3, 2.0 * lateral))
-        self.wz = max(-0.4, min(0.4, 3.0 * wrap(want - yaw)))
+        lateral = -dx * math.sin(self.climb_yaw) + dy * math.cos(self.climb_yaw) - self.offset  # + = left of the line
+        # sidestep back onto the line; steering instead would swing the rear feet off a narrow tread
+        self.wz = max(-0.4, min(0.4, 3.0 * wrap(self.heading - yaw)))
+        self.vy = max(-0.4, min(0.4, -8.0 * lateral))
         if self.bot.t - self.check[1] >= 3 * CYCLE_STEPS:  # 3 gait cycles with < 1 cm progress: a foot is caught
             if self.stair.walking and self.s - self.check[0] < 0.01:
                 return self._done("stuck")
             self.check = (self.s, self.bot.t)
         st = self.stair
-        if st.walking and self.s >= self.end_s and min(st.g.values()) >= self.top - 1e-6:
+        if st.walking and self.s >= self.end_s and all(abs(g - self.top) < 1e-6 for g in st.g.values()):
             st.walking = False
         if not st.walking and st.tick % CYCLE_STEPS == 0 and abs(st.body_z - (self.top + BODY_HEIGHT)) < 0.003:
             return self._done("reached")
@@ -179,7 +197,7 @@ class Skill:
                 return self._done("reached")
             if fwd > 0 and bot.range_ahead < BLOCK_DEPTH:
                 return self._done("blocked")
-            return float(fwd), 0.0
+            return float(fwd), max(-0.3, min(0.3, 3.0 * wrap(self.start_yaw - yaw)))  # hold the heading
 
         # face / approach / follow: track the target on every new sensor frame (10 Hz)
         if bot.sense_id != self.last_sense:
