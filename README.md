@@ -43,7 +43,7 @@ Built for ETHGlobal Mumbai, 0G track **"Physical AI: Agents with a Body"**. The 
 ## Surveillance: a tape nobody can edit
 
 ```
- patrol (no model calls) ──► camera 2 fps ──► 60 s clip: frames + poses + detections + sha256(previous clip)
+ patrol (no model calls) ──► camera 5 fps ──► 60 s clip: frames + poses + detections + sha256(previous clip)
                                                 │
                      person in view? ──► flag the frame (on-robot detector, free)
                                          └─► 0G Compute: one-line description (max 1/min) ──► into the clip
@@ -144,6 +144,7 @@ against, and how:
 
 | Threat | Defence | Checked by |
 |---|---|---|
+| Someone on your network or another browser tab opens the control room / camera | Password login (`SKITTER_PASSWORD`); the control room, recordings, camera and every API call need the session cookie (HttpOnly, SameSite=Strict); 5 wrong passwords lock login for 30 s | `test_security.py` |
 | A web page you visit drives the robot (CSRF on the localhost API) | Every command needs a per-run token that only the control room page receives, sent as a custom header (forces a CORS preflight); POSTs from foreign origins are refused | `scripts/test_security.py` |
 | DNS rebinding (an attacker's domain resolves to 127.0.0.1) | Server binds 127.0.0.1 only and refuses any `Host` that is not localhost | `test_security.py` |
 | Camera frames of your home on public storage | Episodes are sealed with AES-256-GCM (`storage/seal.mjs`) before upload; no `EPISODE_KEY` means no upload (fails closed); tampering or a wrong key fails the GCM tag | `test_security.py`, `audit.py` |
@@ -151,10 +152,16 @@ against, and how:
 | Prompt injection from the scene (a sign saying "walk to the stairs") | The planner treats text in camera images as scene, never as an instruction; only the user's words are instructions | `cortex/core/planner.py` |
 | The model returns something dangerous or nonsense | Safety validator: only known actions, every parameter clamped (speed, distance, stair height); stairs refused if the measured riser differs from the stated one, or the stair is too steep or narrow | `test_executor.py`, `test_stairs.py` |
 | 0G is down, slow or the budget is spent | Safe stop with a spoken reason; no local fallback decisions; every action has a lease; hard spend cap `BUDGET_USD` | `test_executor.py` |
-| A locked-down API also locks out the panic button | E-STOP (and a bare "stop") never needs a token or a model call | `test_security.py` |
+| A locked-down API also locks out the panic button | E-STOP (and a bare "stop") never needs a login, a token or a model call | `test_security.py` |
+
+**Login.** `/app`, `/recordings` and every `/api/*` route except `/api/login` and `/api/estop` need a session. Without
+one, the pages redirect to `/login` and the API answers 401. The password is `SKITTER_PASSWORD` in `.env`; if it is
+empty, a random one is printed at startup. A login sets the `skitter_session` cookie: HttpOnly (page scripts can't
+read it), SameSite=Strict (other sites can't send it). Sessions live in memory, so a restart logs everyone out.
+After 5 wrong passwords, all logins are refused for 30 s. The token checks above still apply on top of the session.
 
 The control room shows a live **Security** log: the security status at startup, every refused request with the
-reason (foreign Host, foreign origin, missing or wrong token), E-STOPs, safe stops, lease expiries and sealed
+reason (foreign Host, foreign origin, missing or wrong token, wrong password, lockout), logins, E-STOPs, safe stops, lease expiries and sealed
 uploads. Blocked requests are counted exactly. Repeats of the same block are logged once per 5 s, so a page
 spamming the API can't flood the log. The log lines are also written into the sealed episode, so an intrusion
 attempt becomes part of the record that can't be edited afterwards. Everything shown is HTML-escaped, so text
@@ -177,17 +184,19 @@ pip install -r requirements.txt
 cd storage && npm install && cd ..
 cp .env.example .env          # add your 0G API key and a funded testnet wallet key
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"   # paste as EPISODE_KEY in .env
+                              # set SKITTER_PASSWORD in .env (empty = a random one is printed at startup)
 python run.py                 # http://localhost:3000   (--gui opens the PyBullet 3D window)
 python run.py --world house   # same, in a ~100 m² furnished bungalow with porch steps
 ```
 
-In the control room, press **Start patrol** (it records automatically) or **REC**, and open **Recordings** to
-verify and play clips. `--clip-s` and `--fps` change the clip length (default 60 s) and frame rate (default 2).
+In the control room, press **Start patrol** (it records automatically) or **REC**, and open **Recordings**
+(`/recordings`) to verify and play clips. `--clip-s` and `--fps` change the clip length (default 60 s) and frame
+rate (default 5).
 Each clip costs two testnet transactions, one for storage and one for the registry. The upload worker handles
 one clip at a time, so a backlog drains after recording stops.
 
 `http://localhost:3000` is the landing page (Skitter walks a dark room and lights up each feature; click a lit
-place). The control room is at `/app`.
+place). The control room is at `/app` and the recordings at `/recordings`; both ask for the password first.
 
 Hold **"Hold to talk"** (or the spacebar) and speak, or type a command. Try:
 `what do you see?` · `come to me` · `follow me` · `walk to the red box` · `turn to face the blue box` · `go back` ·
@@ -209,7 +218,7 @@ python audit.py 0x<rootHash>     # Storage proof + privacy + Chain entry + 0G re
 ```
 
 Tests (no 0G calls, no cost): `python scripts/test_executor.py` (15 safety/behaviour tests),
-`python scripts/test_security.py` (13 API lock-down and sealing tests), `python scripts/test_replay.py`,
+`python scripts/test_security.py` (33 login, API lock-down and sealing tests), `python scripts/test_replay.py`,
 `python scripts/test_skills.py`, `python scripts/test_stairs.py`, `python scripts/test_house.py`,
 `python scripts/test_feed.py` (house patrol while recording; hash chain, frames, person detection; `--upload` also
 seals, uploads and verifies one clip on testnet),

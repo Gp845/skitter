@@ -1,4 +1,4 @@
-"""Skitter: python run.py [--gui] [--port 3000] [--world arena|house] [--clip-s 60] [--fps 2]"""
+"""Skitter: python run.py [--gui] [--port 3000] [--world arena|house] [--clip-s 60] [--fps 5]"""
 import argparse
 import os
 
@@ -21,7 +21,7 @@ def main():
     ap.add_argument("--port", type=int, default=3000)  # 0G sign-in only whitelists 3000/3001/5173
     ap.add_argument("--world", choices=["arena", "house"], default="arena")
     ap.add_argument("--clip-s", type=int, default=60, help="surveillance clip length")
-    ap.add_argument("--fps", type=float, default=2, help="surveillance frame rate")
+    ap.add_argument("--fps", type=float, default=5, help="surveillance frame rate")
     a = ap.parse_args()
 
     inner = HexapodAdapter(gui=a.gui, world=a.world)

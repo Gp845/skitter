@@ -9,17 +9,21 @@
   :root{--cream:#e8e3d6;--ink:#0b0b0b;--red:#eb1716;--muted:#8a857a;
         --brush:"Permanent Marker",cursive;--sans:"Space Grotesk",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace}
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%}
-  body{font:14px/1.5 var(--sans);background:var(--ink);color:var(--cream);overflow:hidden;display:flex;flex-direction:column}
+  html,body{margin:0}
+  body{font:15px/1.55 var(--sans);background:var(--ink);color:var(--cream);min-height:100vh;overflow-x:hidden}
   /* film grain over everything, like the template's print texture */
   body:after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9;opacity:.09;mix-blend-mode:overlay;
     background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 
   /* cream hero with a torn edge into the black stage */
-  header{position:relative;background:var(--cream);color:var(--ink);padding:14px 28px 34px;flex:none;
+  header{position:relative;background:var(--cream);color:var(--ink);padding:18px 40px 42px;
     clip-path:polygon(0 0,100% 0,100% 82%,96% 86%,91% 80%,85% 88%,78% 83%,71% 90%,64% 82%,57% 87%,50% 81%,
       43% 89%,36% 83%,29% 88%,22% 81%,15% 87%,8% 82%,3% 88%,0 84%)}
-  .brand{display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap}
+  nav.top{position:absolute;top:16px;right:40px;display:flex;gap:22px;align-items:center;font:700 12px var(--sans);letter-spacing:.2em;text-transform:uppercase}
+  nav.top a{color:var(--ink);text-decoration:none;border-bottom:2px solid transparent;padding-bottom:2px}
+  nav.top a:hover{border-color:var(--red)}
+  #logout{font:700 12px var(--sans);letter-spacing:.2em;text-transform:uppercase;background:var(--ink);color:var(--cream);padding:7px 14px}
+  .brand{display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap;padding-top:14px}
   h1{font:400 clamp(56px,8vw,104px)/.85 var(--brush);margin:0;letter-spacing:-1px;transform:rotate(-2deg)}
   h1 b{color:var(--red);font-weight:400}
   .tag{padding-bottom:8px}
@@ -27,89 +31,79 @@
   .sub{font:400 15px var(--sans);color:#3a3832;max-width:420px}
   .meta{margin-left:auto;display:flex;gap:8px;padding-bottom:10px;align-items:center}
   .pill{font:400 12px var(--mono);padding:4px 10px;border:1.5px solid var(--ink);border-radius:999px;text-transform:uppercase;letter-spacing:.06em}
+  .pill:empty{display:none}
   .pill.SAFE_STOP{background:var(--red);border-color:var(--red);color:#fff}
   .pill.ACTING{background:var(--ink);color:var(--cream)}
   .pill.THINKING{background:transparent;border-style:dashed}
 
-  main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,700px) minmax(320px,1fr);gap:28px;padding:6px 28px 20px}
-  .stage{display:flex;flex-direction:column;gap:14px;min-height:0}
-  .frame{position:relative;aspect-ratio:4/3;max-height:calc(100vh - 385px);background:#000;border:1px solid #2a2a2a}
+  main{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,460px);gap:44px;padding:14px 40px 56px;max-width:1640px;margin:0 auto}
+  .stage{display:flex;flex-direction:column;gap:26px;min-width:0}
+  .frame{position:relative;aspect-ratio:4/3;width:100%;background:#000;border:1px solid #2a2a2a}
   .frame:before,.frame:after{content:"";position:absolute;width:22px;height:22px;border:3px solid var(--red)}
   .frame:before{top:-6px;left:-6px;border-right:0;border-bottom:0}
   .frame:after{bottom:-6px;right:-6px;border-left:0;border-top:0}
   #cam{width:100%;height:100%;object-fit:contain;display:block}
-  .label{position:absolute;top:10px;right:12px;font:400 11px var(--mono);color:var(--cream);letter-spacing:.2em;background:var(--ink);padding:3px 8px}
+  .label{position:absolute;top:12px;right:14px;font:400 11px var(--mono);color:var(--cream);letter-spacing:.2em;background:var(--ink);padding:3px 8px}
   .label i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);margin-right:6px;animation:blink 1.2s infinite}
   @keyframes blink{50%{opacity:.2}}
 
-  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  button{font:400 18px var(--brush);border:0;cursor:pointer;padding:10px 22px;border-radius:2px;transition:transform .12s}
-  button:hover{transform:translateY(-2px) rotate(-1deg)}
-  button:focus-visible,input:focus-visible{outline:2px solid var(--red);outline-offset:3px}
-  #talk{background:var(--cream);color:var(--ink);min-width:170px}
+  .panel{display:grid;grid-template-columns:1fr 1fr;gap:24px 36px}
+  .group{border-top:1px solid #2a2a2a;padding-top:14px;display:flex;flex-direction:column;gap:14px;min-width:0}
+  .group.wide{grid-column:1/-1}
+  .glabel{font:400 11px var(--mono);color:var(--muted);letter-spacing:.25em;text-transform:uppercase}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  button,.btn{font:400 18px var(--brush);border:0;cursor:pointer;padding:12px 24px;border-radius:2px;transition:transform .12s}
+  button:hover,.btn:hover{transform:translateY(-2px) rotate(-1deg)}
+  button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--red);outline-offset:3px}
+  #talk{background:var(--cream);color:var(--ink);min-width:180px}
   #talk.rec{background:var(--red);color:#fff}
-  #estop{background:var(--red);color:#fff;letter-spacing:.05em}
-  #endep{background:transparent;color:var(--cream);border:1.5px solid var(--cream);font:400 13px var(--sans)}
-  #spend{border-color:var(--muted);color:var(--muted);margin-left:auto}
-  .say{display:flex;gap:10px}
-  input{flex:1;font:400 15px var(--sans);padding:12px 14px;background:transparent;color:var(--cream);border:0;border-bottom:1.5px solid var(--muted)}
+  #estop{background:var(--red);color:#fff;letter-spacing:.05em;min-width:140px}
+  .ghost{background:transparent;color:var(--cream);border:1.5px solid var(--cream);font:400 14px var(--sans);padding:11px 20px;text-decoration:none;display:inline-block}
+  #spend{border-color:var(--muted);color:var(--muted)}
+  .say{display:flex;gap:12px;flex:1;min-width:280px}
+  input{flex:1;min-width:0;font:400 16px var(--sans);padding:12px 14px;background:transparent;color:var(--cream);border:0;border-bottom:1.5px solid var(--muted)}
   input::placeholder{color:#5c584f}
   #send{background:var(--cream);color:var(--ink);font-size:16px}
   #pose{font:400 12px var(--mono);color:var(--muted)}
+  #pose:empty{display:none}
 
-  aside{display:flex;flex-direction:column;min-height:0;border-left:1px solid #2a2a2a;padding-left:24px}
-  aside h2{font:400 34px/1 var(--brush);margin:0 0 4px;color:var(--cream)}
-  aside h2 + .tag{margin-bottom:12px}
-  #feed{overflow:auto;flex:1;padding-right:8px}
-  .ev{padding:9px 0;border-bottom:1px dashed #2a2a2a;font-size:13.5px;animation:in .35s ease-out}
+  /* contain:size makes the log column take the stage's height instead of growing with its content */
+  aside{display:flex;flex-direction:column;contain:size;min-height:760px;border-left:1px solid #2a2a2a;padding-left:32px}
+  aside h2{font:400 36px/1 var(--brush);margin:0 0 6px;color:var(--cream)}
+  aside h2 + .tag{margin-bottom:14px}
+  #feed{overflow:auto;flex:1 1 0;min-height:320px;padding-right:10px}
+  .ev{padding:11px 0;border-bottom:1px dashed #2a2a2a;font-size:15px;line-height:1.5;animation:in .35s ease-out;word-break:break-word}
   @keyframes in{from{opacity:0;transform:translateX(8px)}}
-  .t{font:400 11px var(--mono);color:var(--muted);margin-right:6px}
-  .rid{font:400 11px var(--mono);color:#6f6a60;word-break:break-all}
+  .t{font:400 11.5px var(--mono);color:var(--muted);margin-right:6px}
+  .rid{font:400 11.5px var(--mono);color:#6f6a60;word-break:break-all}
   .decision{color:var(--cream)}.decision:before{content:"";display:inline-block;width:8px;height:8px;background:var(--red);margin-right:8px}
   .safe_stop,.estop{color:var(--red);font-weight:700}
   .stt,.utterance{color:#cfc8b6}
   .task_end{color:#fff}
-  #secbox{flex:none;height:38%;display:flex;flex-direction:column;margin-top:16px;padding-top:12px;border-top:2px solid var(--red)}
+  #secbox{flex:0 0 40%;min-height:280px;display:flex;flex-direction:column;margin-top:22px;padding-top:16px;border-top:2px solid var(--red)}
   #secbox h2{display:flex;align-items:baseline;gap:12px}
   #blocked{font:400 12px var(--mono);color:var(--muted);letter-spacing:.05em}
   #blocked b{color:var(--red)}
-  #sec{overflow:auto;flex:1;padding-right:8px;font:400 12px/1.45 var(--mono)}
-  .sl{padding:5px 0;border-bottom:1px dotted #222;animation:in .35s ease-out;word-break:break-word}
-  .lv{display:inline-block;min-width:46px;text-align:center;margin-right:8px;padding:0 4px;font-size:10.5px;letter-spacing:.08em}
+  #sec{overflow:auto;flex:1 1 0;min-height:0;padding-right:10px;font:400 13px/1.5 var(--mono)}
+  .sl{padding:7px 0;border-bottom:1px dotted #222;animation:in .35s ease-out;word-break:break-word}
+  .lv{display:inline-block;min-width:50px;text-align:center;margin-right:8px;padding:0 4px;font-size:11px;letter-spacing:.08em}
   .lv.ok{color:#7fbf7a;border:1px solid #3d5c3a}.lv.warn{color:#e6b84c;border:1px solid #6b5422}
   .lv.block{color:#fff;background:var(--red)}
   .lv.alert{color:#111;background:#ff8a3d}
+  .empty{color:#5c584f;font-size:13px;padding:10px 0}
   .pill.PATROL{background:#ff8a3d;border-color:#ff8a3d}
-  #recbtn{background:transparent;color:var(--cream);border:1.5px solid var(--red);font:400 13px var(--sans)}
-  #recbtn.on{background:var(--red);color:#fff}
+  #recbtn{border-color:var(--red)}
+  #recbtn.on{background:var(--red);border-color:var(--red);color:#fff}
   #recbtn.on:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#fff;margin-right:7px;animation:blink 1s infinite}
-  #patrol,#clipsbtn{background:transparent;color:var(--cream);border:1.5px solid var(--cream);font:400 13px var(--sans)}
-  #recs{position:fixed;inset:0;z-index:8;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center}
-  #recs[hidden]{display:none}
-  .recwin{width:min(1180px,94vw);height:min(760px,90vh);background:var(--ink);border:1px solid #2a2a2a;padding:22px 26px;display:flex;flex-direction:column;gap:14px}
-  .rechead{display:flex;align-items:baseline;gap:16px}
-  .rechead h2{font:400 34px/1 var(--brush);margin:0}
-  #recx{margin-left:auto;background:transparent;color:var(--cream);font:400 22px var(--sans);padding:0 8px}
-  .recgrid{flex:1;min-height:0;display:grid;grid-template-columns:400px 1fr;gap:24px}
-  #clips{overflow:auto;font:400 12px/1.4 var(--mono)}
-  .clip{display:grid;grid-template-columns:42px 1fr auto;gap:8px;align-items:center;padding:8px 4px;border-bottom:1px dashed #2a2a2a}
-  .clip.sel{background:#1b1b1b}
-  .clip b{color:var(--red);font-weight:400}
-  .clip .st{color:var(--muted);font-size:11px}
-  .clip button{font:400 12px var(--sans);padding:4px 10px;background:var(--cream);color:var(--ink)}
-  .clip button:disabled{opacity:.3;cursor:default;transform:none}
-  .player{display:flex;flex-direction:column;gap:10px;min-height:0}
-  .screen{position:relative;background:#000;aspect-ratio:4/3;max-height:52vh;border:1px solid #2a2a2a}
-  #pimg{width:100%;height:100%;object-fit:contain;display:block;image-rendering:pixelated}
-  #pimg:not([src]){visibility:hidden}
-  #pstamp{position:absolute;left:10px;bottom:8px;font:400 12px var(--mono);background:rgba(0,0,0,.6);padding:2px 8px}
-  #pstamp.det{background:#ff8a3d;color:#111}
-  #pbar{width:100%;accent-color:var(--red)}
-  #checks{font:400 12px/1.6 var(--mono);overflow:auto}
-  .ck.ok:before{content:"PASS ";color:#7fbf7a}.ck.bad:before{content:"FAIL ";color:var(--red)}
-  @media (max-width:980px){body{overflow:auto}main{grid-template-columns:1fr}aside{border:0;padding:0}.frame{max-height:none}}
+  #patrol.on{border-color:#ff8a3d;color:#ff8a3d}
+
+  @media (max-width:1200px){main{grid-template-columns:minmax(0,1fr) 360px;gap:30px;padding:12px 26px 48px}
+    header{padding:18px 26px 42px}nav.top{right:26px}aside{padding-left:24px}.panel{gap:20px 24px}}
+  @media (max-width:900px){main{grid-template-columns:1fr}.panel{grid-template-columns:1fr}
+    aside{contain:none;min-height:0;border:0;padding:0}#feed{flex:none;height:440px}#secbox{flex:none;height:340px}}
 </style>
 <header>
+  <nav class="top"><a href="/">← Home</a><a href="/recordings">Recordings</a><button id="logout">Log out</button></nav>
   <div class="brand">
     <h1>Skit<b>ter</b></h1>
     <div class="tag">
@@ -122,44 +116,49 @@
 <main>
   <section class="stage">
     <div class="frame"><img id="cam" alt="Skitter's camera view"><div class="label"><i></i>LIVE · CAM</div></div>
-    <div class="controls">
-      <button id="talk">Hold to talk</button><button id="estop">E-STOP</button>
-      <button id="endep">End episode → 0G Storage</button><span id="spend" class="pill"></span>
+    <div class="panel">
+      <div class="group wide">
+        <div class="glabel">Talk · stop</div>
+        <div class="row">
+          <button id="talk">Hold to talk</button><button id="estop">E-STOP</button>
+          <div class="say"><input id="txt" aria-label="Command" placeholder='"come to me" · "follow me" · "what do you see?"'>
+            <button id="send">Send</button></div>
+        </div>
+      </div>
+      <div class="group">
+        <div class="glabel">Security</div>
+        <div class="row"><button id="recbtn" class="ghost">REC</button><button id="patrol" class="ghost">Start patrol</button>
+          <a id="clipsbtn" class="ghost btn" href="/recordings">Recordings →</a></div>
+      </div>
+      <div class="group">
+        <div class="glabel">Episode</div>
+        <div class="row"><button id="endep" class="ghost">End episode → 0G Storage</button><span id="spend" class="pill"></span></div>
+        <div id="pose"></div>
+      </div>
     </div>
-    <div class="controls">
-      <button id="recbtn">REC</button><button id="patrol">Start patrol</button><button id="clipsbtn">Recordings</button>
-    </div>
-    <div class="say"><input id="txt" aria-label="Command" placeholder='"come to me" · "follow me" · "what do you see?"'>
-      <button id="send">Send</button></div>
-    <div id="pose"></div>
   </section>
   <aside>
     <h2>Decisions</h2><div class="tag">0G decision log</div>
-    <div id="feed"></div>
+    <div id="feed"><div class="empty">Nothing yet. Say or type a command.</div></div>
     <div id="secbox">
       <h2>Security <span id="blocked">blocked <b>0</b></span></h2><div class="tag">guard · seal · stops</div>
       <div id="sec"></div>
     </div>
   </aside>
 </main>
-<div id="recs" hidden>
-  <div class="recwin">
-    <div class="rechead"><h2>Recordings</h2><div class="tag">sealed · stored on 0G · indexed on 0G Chain · hash-chained</div><button id="recx" aria-label="Close">✕</button></div>
-    <div class="recgrid">
-      <div id="clips"></div>
-      <div class="player">
-        <div class="screen"><img id="pimg" alt="recorded frame"><div id="pstamp">pick a clip, then Verify &amp; play</div></div>
-        <input id="pbar" type="range" min="0" max="0" value="0" aria-label="Seek">
-        <div id="checks"></div>
-      </div>
-    </div>
-  </div>
-</div>
 <script>
 const $=id=>document.getElementById(id);
-setInterval(()=>{$('cam').src='/api/frame?'+Date.now()},250);
-setInterval(async()=>{
-  const s=await (await fetch('/api/status')).json();
+const TOKEN=document.querySelector('meta[name=skitter-token]')?.content||'';  // injected by the server for this page only
+// no session (expired, logged out elsewhere): back to the login page
+const api=(u,o)=>fetch(u,o).then(r=>{if(r.status===401){location.href='/login?next='+encodeURIComponent(location.pathname);throw new Error('login required')}return r});
+const post=(u,b)=>api(u,{method:'POST',headers:{'Content-Type':'application/json','X-Skitter-Token':TOKEN},body:JSON.stringify(b||{})});
+// poll every 150 ms, but never more than one frame in flight
+const cam=$('cam');let camT;
+const nextFrame=ms=>{clearTimeout(camT);camT=setTimeout(()=>{cam.src='/api/frame?'+Date.now()},ms)};
+cam.onload=()=>nextFrame(150);cam.onerror=()=>nextFrame(1000);nextFrame(0);
+const loop=(fn,ms)=>{const go=async()=>{try{await fn()}catch(e){}setTimeout(go,ms)};go()};
+loop(async()=>{
+  const s=await (await api('/api/status')).json();
   $('robot').textContent=s.name;$('state').textContent=s.state;$('state').className='pill '+s.state;
   $('spend').textContent='$'+s.spent_usd.toFixed(3)+' / $'+s.cap_usd.toFixed(2);
   $('blocked').innerHTML=`blocked <b>${+s.blocked||0}</b>`;
@@ -180,8 +179,8 @@ const SEC={  // event -> [level, message] for the security log
   episode_uploaded:e=>e.rootHash?['ok',`episode ${e.episode} ${e.sealed?'sealed (AES-256-GCM), ':''}stored on 0G, root ${e.rootHash}`+(e.registryTx?', on chain':'')]
                                  :['warn',`episode ${e.episode} kept local, not uploaded: ${e.upload_error}`]};
 let since=0;
-setInterval(async()=>{
-  const d=await (await fetch('/api/events?since='+since)).json();since=d.next;
+loop(async()=>{
+  const d=await (await api('/api/events?since='+since)).json();since=d.next;
   for(const e of d.events){
     const t=new Date(e.t*1000).toLocaleTimeString();
     if(SEC[e.type]){
@@ -202,55 +201,24 @@ setInterval(async()=>{
       body=`💬 Skitter: "${esc(line)}"`;
       if(Date.now()/1000-e.t<15){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(line))}}  // don't re-read old answers on page load
     else body=esc(e.type)+(e.detail?' '+J(e.detail):'');
-    div.innerHTML=`<span class=t>${t}</span> ${body}`;$('feed').prepend(div);
+    div.innerHTML=`<span class=t>${t}</span> ${body}`;$('feed').querySelector('.empty')?.remove();$('feed').prepend(div);
   }
 },400);
-const TOKEN=document.querySelector('meta[name=skitter-token]')?.content||'';  // injected by the server for this page only
-const post=(u,b)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json','X-Skitter-Token':TOKEN},body:JSON.stringify(b||{})});
 $('estop').onclick=()=>post('/api/estop');
 $('endep').onclick=async()=>{$('endep').textContent='Uploading to 0G Storage…';try{await post('/api/episode/end')}finally{$('endep').textContent='End episode → 0G Storage'}};
 const send=()=>{const v=$('txt').value.trim();if(v){post('/api/command',{text:v});$('txt').value=''}};
+$('logout').onclick=async()=>{try{await post('/api/logout')}finally{location.href='/'}};
 
-// surveillance: recording, patrol, sealed recordings (feed reads need the token: they return decrypted footage)
-const feedGet=u=>fetch(u,{headers:{'X-Skitter-Token':TOKEN}}).then(r=>r.json());
-let feedOn=false,clips=[],sel=null,play=null;
+// surveillance: recording and patrol (feed reads need the token); clips are browsed on /recordings
+let feedOn=false;
 async function feedPoll(){
-  const f=await feedGet('/api/feed');feedOn=f.on;clips=f.clips;
+  const f=await (await api('/api/feed',{headers:{'X-Skitter-Token':TOKEN}})).json();feedOn=f.on;
   $('recbtn').classList.toggle('on',feedOn);$('recbtn').textContent=feedOn?'REC':'REC off';
-  $('patrol').textContent=f.patrol?'Patrolling… (E-STOP ends)':'Start patrol';
-  if(!$('recs').hidden)drawClips();
+  $('patrol').classList.toggle('on',!!f.patrol);$('patrol').textContent=f.patrol?'Patrolling… (E-STOP ends)':'Start patrol';
 }
-setInterval(feedPoll,2000);feedPoll().then(()=>{if(location.hash==='#recordings')$('clipsbtn').click()});
-$('recbtn').onclick=async()=>{await post('/api/feed/'+(feedOn?'stop':'start'));feedPoll()};
-$('patrol').onclick=async()=>{await post('/api/patrol');feedPoll()};
-$('clipsbtn').onclick=()=>{$('recs').hidden=false;drawClips()};
-$('recx').onclick=()=>{$('recs').hidden=true;clearInterval(play)};
-const hm=t=>new Date(t*1000).toLocaleTimeString();
-function drawClips(){
-  $('clips').innerHTML=clips.length?'':'<div class=st>No clips yet: press REC or Start patrol. A clip closes every minute.</div>';
-  for(const c of clips){
-    const d=document.createElement('div');d.className='clip'+(sel===c.root&&c.root?' sel':'');
-    d.innerHTML=`<b>#${esc(c.seq)}</b><div>${esc(hm(c.start))}–${esc(hm(c.end))} · ${esc(c.frames)} frames`+
-      `${c.detections?` · <b>${esc(c.detections)} person</b>`:''}<div class=st>${esc(c.status)}${c.root?' · '+esc(c.root.slice(0,14))+'…':''}${c.error?' · '+esc(c.error.slice(0,60)):''}</div></div>`;
-    const b=document.createElement('button');b.textContent='Verify & play';b.disabled=!c.root;b.onclick=()=>openClip(c.root);
-    d.append(b);$('clips').append(d);
-  }
-}
-async function openClip(root){
-  sel=root;drawClips();clearInterval(play);
-  $('checks').innerHTML='downloading from 0G Storage, checking the chain entry, decrypting…';$('pstamp').textContent='verifying…';
-  const v=await feedGet('/api/feed/verify?root='+encodeURIComponent(root));
-  $('checks').innerHTML=(v.checks||[{name:'error',ok:false,detail:v.error}]).map(c=>`<div class="ck ${c.ok?'ok':'bad'}">${esc(c.name)}: ${esc(c.detail)}</div>`).join('')+
-    (v.meta?.alerts||[]).map(a=>`<div>⚠ ${esc(hm(a.t))} ${a.person_px?'person detected':esc(a.description||a.error||'')}</div>`).join('');
-  if(!v.meta)return;
-  const fr=v.meta.frames,dets=new Set((v.meta.alerts||[]).map(a=>a.frame_sha256).filter(Boolean));
-  let i=0;$('pbar').max=fr.length-1;
-  const show=()=>{const f=fr[i];$('pimg').src='data:image/jpeg;base64,'+v.images[f.sha256.slice(0,16)];$('pbar').value=i;
-    const seen=f.person_px>=150;$('pstamp').className=seen?'det':'';
-    $('pstamp').textContent=`#${v.meta.seq} · ${hm(f.t)} · frame ${i+1}/${fr.length}`+(seen?' · PERSON':'')+(dets.has(f.sha256)?' · ALERT':'')};
-  $('pbar').oninput=()=>{i=+$('pbar').value;show()};
-  show();play=setInterval(()=>{i=(i+1)%fr.length;show()},1000/(v.meta.fps*2));  // plays at 2x
-}
+loop(feedPoll,2000);
+$('recbtn').onclick=async()=>{await post('/api/feed/'+(feedOn?'stop':'start'));feedPoll().catch(()=>{})};
+$('patrol').onclick=async()=>{await post('/api/patrol');feedPoll().catch(()=>{})};
 $('send').onclick=send;$('txt').onkeydown=e=>{if(e.key==='Enter')send()};
 
 // push-to-talk: browser speech recognition (instant) when available, else 0G speech-to-text
@@ -278,7 +246,7 @@ async function startRec(){
     const off=new OfflineAudioContext(1,Math.ceil(dec.duration*16000),16000);
     const src=off.createBufferSource();src.buffer=dec;src.connect(off.destination);src.start();
     const pcm=(await off.startRendering()).getChannelData(0);
-    await fetch('/api/voice',{method:'POST',headers:{'X-Skitter-Token':TOKEN},body:wav(pcm)});};
+    await api('/api/voice',{method:'POST',headers:{'X-Skitter-Token':TOKEN},body:wav(pcm)});};
   rec.start();$('talk').classList.add('rec');$('talk').textContent='Listening…';
 }
 function stopRec(){if(rec&&rec.state==='recording'){rec.stop();$('talk').classList.remove('rec');$('talk').textContent='Hold to talk'}}

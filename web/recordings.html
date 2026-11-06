@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skitter · Recordings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Space+Grotesk:wght@400;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root{--cream:#e8e3d6;--ink:#0b0b0b;--red:#eb1716;--muted:#8a857a;--orange:#ff8a3d;--green:#7fbf7a;
+        --brush:"Permanent Marker",cursive;--sans:"Space Grotesk",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace}
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font:15px/1.55 var(--sans);background:var(--ink);color:var(--cream);min-height:100vh;overflow-x:hidden}
+  body:after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9;opacity:.09;mix-blend-mode:overlay;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  header{position:relative;background:var(--cream);color:var(--ink);padding:18px 40px 42px;
+    clip-path:polygon(0 0,100% 0,100% 82%,96% 86%,91% 80%,85% 88%,78% 83%,71% 90%,64% 82%,57% 87%,50% 81%,
+      43% 89%,36% 83%,29% 88%,22% 81%,15% 87%,8% 82%,3% 88%,0 84%)}
+  nav.top{position:absolute;top:16px;right:40px;display:flex;gap:22px;align-items:center;font:700 12px var(--sans);letter-spacing:.2em;text-transform:uppercase}
+  nav.top a{color:var(--ink);text-decoration:none;border-bottom:2px solid transparent;padding-bottom:2px}
+  nav.top a:hover{border-color:var(--red)}
+  #logout{font:700 12px var(--sans);letter-spacing:.2em;text-transform:uppercase;background:var(--ink);color:var(--cream);padding:7px 14px}
+  .brand{display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap;padding-top:14px}
+  h1{font:400 clamp(52px,7vw,92px)/.85 var(--brush);margin:0;letter-spacing:-1px;transform:rotate(-2deg)}
+  h1 b{color:var(--red);font-weight:400}
+  .tag{font:700 13px var(--sans);letter-spacing:.35em;color:var(--red);padding-bottom:8px}
+  .sub{font:400 15px var(--sans);color:#3a3832;max-width:520px;letter-spacing:0}
+
+  .why{max-width:1640px;margin:0 auto;padding:6px 40px 0;color:#cfc8b6;font-size:14.5px}
+  .why b{color:var(--cream);font-weight:700}
+  main{display:grid;grid-template-columns:400px minmax(0,1fr);gap:40px;padding:22px 40px 56px;max-width:1640px;margin:0 auto}
+  h2{font:400 34px/1 var(--brush);margin:0;color:var(--cream)}
+  h3{font:400 11px var(--mono);color:var(--muted);letter-spacing:.25em;text-transform:uppercase;margin:0 0 10px}
+  button{font:400 16px var(--brush);border:0;cursor:pointer;padding:10px 20px;border-radius:2px;transition:transform .12s}
+  button:hover{transform:translateY(-2px) rotate(-1deg)}
+  button:disabled{opacity:.3;cursor:default;transform:none}
+  button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--red);outline-offset:3px}
+
+  .list{display:flex;flex-direction:column;min-width:0;position:sticky;top:16px;align-self:start;max-height:calc(100vh - 32px)}
+  .lhead{display:flex;align-items:baseline;gap:12px;padding-bottom:12px;border-bottom:2px solid var(--red)}
+  #feedst{margin-left:auto;font:400 11.5px var(--mono);color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+  #feedst.on{color:var(--red)}
+  #clips{overflow:auto;min-height:200px;padding-right:6px;font:400 13px/1.45 var(--mono)}
+  .clip{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px 6px;border-bottom:1px dashed #2a2a2a}
+  .clip.sel{background:#1b1b1b;box-shadow:inset 3px 0 0 var(--red)}
+  .clip .seq{color:var(--red);font-size:14px}
+  .clip .det{color:#111;background:var(--orange);padding:0 6px;white-space:nowrap}
+  .clip .st{color:var(--muted);font-size:11.5px;word-break:break-all}
+  .clip .err{color:var(--red)}
+  .clip button{font:400 13px var(--sans);padding:6px 12px;background:var(--cream);color:var(--ink)}
+  .empty{color:var(--muted);font:400 14px/1.6 var(--sans);padding:18px 4px}
+  .empty a{color:var(--cream)}
+
+  .player{display:flex;flex-direction:column;gap:14px;min-width:0;max-width:max(560px,calc((100vh - 300px)*4/3))}
+  .screen{position:relative;background:#000;aspect-ratio:4/3;width:100%;border:1px solid #2a2a2a}
+  .screen:before,.screen:after{content:"";position:absolute;width:22px;height:22px;border:3px solid var(--red);z-index:1}
+  .screen:before{top:-6px;left:-6px;border-right:0;border-bottom:0}
+  .screen:after{bottom:-6px;right:-6px;border-left:0;border-top:0}
+  #pimg{width:100%;height:100%;object-fit:contain;display:block}
+  #pimg:not([src]){visibility:hidden}
+  #pstamp{position:absolute;left:12px;bottom:10px;font:400 13px var(--mono);background:rgba(0,0,0,.7);padding:3px 10px}
+  #pperson{position:absolute;top:12px;left:14px;font:700 15px var(--sans);letter-spacing:.3em;color:#111;background:var(--orange);padding:4px 12px}
+  #pperson[hidden]{display:none}
+  .screen.person{border-color:var(--orange);box-shadow:0 0 0 2px var(--orange)}
+  #pwait{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:20px;background:rgba(11,11,11,.86);font:400 14px var(--mono);color:#cfc8b6}
+  #pwait[hidden]{display:none}
+  #pwait b{font:400 30px/1.1 var(--brush);color:var(--cream)}
+  .spin{width:34px;height:34px;border:3px solid #333;border-top-color:var(--red);border-radius:50%;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  #pplay{background:var(--cream);color:var(--ink);min-width:96px}
+  .seek{position:relative;flex:1;min-width:200px}
+  #pbar{width:100%;accent-color:var(--red);margin:0;display:block}
+  #marks{position:relative;height:6px;margin-top:4px}
+  #marks span{position:absolute;top:0;height:6px;min-width:2px;background:var(--orange)}
+  #marks span.al{background:var(--red)}
+  .speed{display:flex;gap:0}
+  .speed button{font:400 13px var(--mono);padding:8px 12px;background:transparent;color:var(--cream);border:1.5px solid #444;margin-left:-1.5px}
+  .speed button.on{background:var(--red);border-color:var(--red);color:#fff}
+  .speed button:hover{transform:none}
+  #ptime{font:400 12px var(--mono);color:var(--muted);min-width:110px;text-align:right}
+  .results{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;border-top:1px solid #2a2a2a;padding-top:16px}
+  #checks,#alerts{font:400 13px/1.6 var(--mono)}
+  .ck{padding:4px 0;word-break:break-word}
+  .ck b{display:inline-block;min-width:46px;text-align:center;margin-right:8px;font-weight:400;font-size:11px;letter-spacing:.08em}
+  .ck.ok b{color:var(--green);border:1px solid #3d5c3a}
+  .ck.bad b{color:#fff;background:var(--red)}
+  .ck.bad{color:#f3b0ae}
+  .verdict{font:400 24px/1.2 var(--brush);margin-bottom:8px}
+  .verdict.ok{color:var(--green)}.verdict.bad{color:var(--red)}
+  .al{padding:6px 0;border-bottom:1px dotted #222;word-break:break-word}
+  #alerts .al{cursor:pointer}
+  #alerts .al:hover{background:#151515}
+  .al .t{color:var(--orange);margin-right:8px}
+  .muted{color:var(--muted)}
+
+  @media (max-width:1180px){main{grid-template-columns:340px minmax(0,1fr);gap:28px;padding:20px 26px 48px}
+    header{padding:18px 26px 42px}nav.top{right:26px}.why{padding:6px 26px 0}.results{grid-template-columns:1fr}}
+  @media (max-width:900px){main{grid-template-columns:1fr}.list{position:static;max-height:none}#clips{max-height:380px}}
+</style>
+<header>
+  <nav class="top"><a href="/">← Home</a><a href="/app">Control room</a><button id="logout">Log out</button></nav>
+  <div class="brand">
+    <h1>Skit<b>ter</b></h1>
+    <div>
+      <div class="tag">Recordings · verified on 0G</div>
+      <div class="sub">Every clip the robot recorded, played back only after it proves it hasn't been touched.</div>
+    </div>
+  </div>
+</header>
+<p class="why"><b>What Verify proves:</b> the clip was sealed (encrypted and signed) on the robot, its bytes come back intact from 0G Storage, its root is registered on 0G Chain, and it is hash-chained to the clip before it, so nothing was edited, swapped or deleted.</p>
+<main>
+  <section class="list">
+    <div class="lhead"><h2>Clips</h2><span id="count" class="muted"></span><span id="feedst"></span></div>
+    <div id="clips"><div class="empty">Loading clips…</div></div>
+  </section>
+  <section class="player">
+    <div class="screen" id="screen">
+      <img id="pimg" alt="recorded frame">
+      <div id="pperson" hidden>PERSON</div>
+      <div id="pstamp">pick a clip, then Verify &amp; play</div>
+      <div id="pwait" hidden><div class="spin"></div><b>Verifying on 0G…</b><div>download, chain, decrypt</div><div id="pel" class="muted"></div></div>
+    </div>
+    <div class="bar">
+      <button id="pplay" disabled>▶ Play</button>
+      <div class="seek"><input id="pbar" type="range" min="0" max="0" value="0" aria-label="Seek" disabled><div id="marks"></div></div>
+      <div class="speed" role="group" aria-label="Playback speed"><button data-s="1" class="on">1x</button><button data-s="2">2x</button><button data-s="4">4x</button></div>
+      <span id="ptime"></span>
+    </div>
+    <div class="results">
+      <div><h3>Checks</h3><div id="checks" class="muted">Nothing verified yet.</div></div>
+      <div><h3>Alerts</h3><div id="alerts" class="muted">—</div></div>
+    </div>
+  </section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const TOKEN=document.querySelector('meta[name=skitter-token]')?.content||'';  // injected by the server for this page only
+// clip names, statuses, errors and alert descriptions can carry outside text: escape everything
+const esc=s=>String(s??'').replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'})[c]);
+const api=(u,o)=>fetch(u,o).then(r=>{if(r.status===401){location.href='/login?next='+encodeURIComponent(location.pathname);throw new Error('login required')}return r});
+const post=(u,b)=>api(u,{method:'POST',headers:{'Content-Type':'application/json','X-Skitter-Token':TOKEN},body:JSON.stringify(b||{})});
+const feedGet=u=>api(u,{headers:{'X-Skitter-Token':TOKEN}});
+const hm=t=>t?new Date(t*1000).toLocaleTimeString():'?';
+const PERSON_PX=150;
+$('logout').onclick=async()=>{try{await post('/api/logout')}finally{location.href='/'}};
+
+let clips=[],sel=null;
+async function poll(){
+  try{
+    const r=await feedGet('/api/feed');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const f=await r.json();clips=f.clips||[];
+    $('feedst').className=f.on?'on':'';
+    $('feedst').textContent=(f.on?'● REC on':'REC off')+(f.patrol?' · patrolling':'');
+    drawClips();
+  }catch(e){
+    if(!clips.length)$('clips').innerHTML=`<div class="empty">Can't load clips right now (${esc(e.message)}). Retrying…</div>`;
+  }
+  setTimeout(poll,3000);
+}
+function drawClips(){
+  $('count').textContent=clips.length?clips.length+' total':'';
+  if(!clips.length){$('clips').innerHTML='<div class="empty">No clips yet. Press REC or Start patrol in the <a href="/app">control room</a>; a clip closes every minute.</div>';return}
+  const box=document.createDocumentFragment();
+  for(const c of clips){
+    const d=document.createElement('div');d.className='clip'+(c.root&&sel===c.root?' sel':'');
+    d.innerHTML=`<span class="seq">#${esc(c.seq)}</span><div>${esc(hm(c.start))}–${esc(hm(c.end))} · ${esc(c.frames)} fr`+
+      (c.detections?` <span class="det">${esc(c.detections)} person</span>`:'')+
+      `<div class="st">${esc(c.status)}${c.root?' · '+esc(String(c.root).slice(0,14))+'…':''}</div>`+
+      (c.error?`<div class="st err">${esc(String(c.error).slice(0,120))}</div>`:'')+`</div>`;
+    const b=document.createElement('button');b.textContent='Verify & play';b.disabled=!c.root;b.onclick=()=>openClip(c.root);
+    d.append(b);box.append(d);
+  }
+  $('clips').replaceChildren(box);
+}
+
+// player
+let ver=0,fr=[],imgs={},fps=5,i=0,playing=false,speed=1,timer=null,alertAt=new Set(),seq='';
+function show(){
+  const f=fr[i];if(!f)return;
+  const b64=imgs[String(f.sha256).slice(0,16)];
+  if(b64)$('pimg').src='data:image/jpeg;base64,'+b64;else $('pimg').removeAttribute('src');
+  $('pbar').value=i;
+  const person=(+f.person_px||0)>=PERSON_PX;
+  $('pperson').hidden=!person;$('screen').classList.toggle('person',person);
+  $('pstamp').textContent=`#${seq} · ${hm(f.t)} · frame ${i+1}/${fr.length}`+(alertAt.has(f.sha256)?' · ALERT':'')+(b64?'':' · image missing');
+  $('ptime').textContent=`${(i/fps).toFixed(1)}s / ${((fr.length-1)/fps).toFixed(1)}s`;
+}
+function tick(){
+  clearTimeout(timer);if(!playing)return;
+  if(i>=fr.length-1){setPlaying(false);return}
+  i++;show();timer=setTimeout(tick,1000/(fps*speed));
+}
+function setPlaying(on){
+  playing=on&&fr.length>1;$('pplay').textContent=playing?'❚❚ Pause':'▶ Play';
+  clearTimeout(timer);if(playing)timer=setTimeout(tick,1000/(fps*speed));
+}
+$('pplay').onclick=()=>{if(!playing&&i>=fr.length-1){i=0;show()}setPlaying(!playing)};
+$('pbar').oninput=()=>{i=+$('pbar').value;show()};
+for(const b of document.querySelectorAll('.speed button'))b.onclick=()=>{
+  speed=+b.dataset.s;document.querySelectorAll('.speed button').forEach(x=>x.classList.toggle('on',x===b));setPlaying(playing)};
+document.addEventListener('keydown',e=>{
+  if(!fr.length||e.target.tagName==='INPUT'&&e.target.type!=='range')return;
+  if(e.code==='Space'){if(e.target.tagName==='BUTTON')return;e.preventDefault();$('pplay').click()}
+  else if(e.key==='ArrowRight'&&e.target.type!=='range'){i=Math.min(fr.length-1,i+1);show()}
+  else if(e.key==='ArrowLeft'&&e.target.type!=='range'){i=Math.max(0,i-1);show()}
+});
+
+function drawMarks(alerts){
+  const n=Math.max(fr.length,1),w=100/n;let h='';
+  fr.forEach((f,k)=>{if((+f.person_px||0)>=PERSON_PX||alertAt.has(f.sha256))h+=`<span class="${alertAt.has(f.sha256)?'al':''}" style="left:${k*w}%;width:${w}%"></span>`});
+  $('marks').innerHTML=h;
+}
+function frameFor(a){
+  let k=a.frame_sha256?fr.findIndex(f=>f.sha256===a.frame_sha256):-1;
+  if(k<0&&a.t){let best=Infinity;fr.forEach((f,j)=>{const d=Math.abs(f.t-a.t);if(d<best){best=d;k=j}})}
+  return k;
+}
+async function openClip(root){
+  const my=++ver;sel=root;drawClips();setPlaying(false);
+  fr=[];imgs={};i=0;$('pbar').max=0;$('pbar').disabled=true;$('pplay').disabled=true;$('marks').innerHTML='';$('ptime').textContent='';
+  $('pimg').removeAttribute('src');$('pperson').hidden=true;$('screen').classList.remove('person');
+  $('pstamp').textContent='root '+String(root).slice(0,18)+'…';
+  $('checks').className='muted';$('checks').textContent='Verifying on 0G… (download, chain, decrypt)';$('alerts').className='muted';$('alerts').textContent='—';
+  $('pwait').hidden=false;const t0=Date.now();
+  const el=setInterval(()=>{$('pel').textContent=Math.round((Date.now()-t0)/1000)+' s · usually 30–60 s'},500);
+  let v;
+  try{
+    const r=await feedGet('/api/feed/verify?root='+encodeURIComponent(root));
+    v=await r.json().catch(()=>({error:'bad response (HTTP '+r.status+')'}));
+    if(!r.ok&&!v.checks)v={error:v.error||v.detail||'HTTP '+r.status};
+  }catch(e){v={error:e.message}}
+  finally{clearInterval(el);$('pel').textContent=''}
+  if(my!==ver)return;
+  $('pwait').hidden=true;
+  const checks=v.checks||[{name:'verify',ok:false,detail:v.error||'no result'}];
+  const pass=checks.length&&checks.every(c=>c.ok);
+  $('checks').className='';
+  $('checks').innerHTML=`<div class="verdict ${pass?'ok':'bad'}">${pass?'Verified: untouched':'Not verified'}</div>`+
+    checks.map(c=>`<div class="ck ${c.ok?'ok':'bad'}"><b>${c.ok?'PASS':'FAIL'}</b>${esc(c.name)}: ${esc(c.detail)}</div>`).join('');
+  const m=v.meta;
+  if(!m||!Array.isArray(m.frames)||!m.frames.length){$('pstamp').textContent='no playable footage';return}
+  fr=m.frames;imgs=v.images||{};fps=+m.fps>0?+m.fps:5;seq=String(m.seq??'');
+  const alerts=m.alerts||[];alertAt=new Set(alerts.map(a=>a.frame_sha256).filter(Boolean));
+  $('alerts').className=alerts.length?'':'muted';
+  $('alerts').innerHTML=alerts.length?'':'No alerts in this clip.';
+  for(const a of alerts){
+    const d=document.createElement('div');d.className='al';
+    const what=a.description||a.error||((+a.person_px||0)>0?`person detected (${+a.person_px} px)`:'alert');
+    d.innerHTML=`<span class="t">⚠ ${esc(hm(a.t))}</span>${esc(what)}`;
+    d.onclick=()=>{const k=frameFor(a);if(k>=0){setPlaying(false);i=k;show()}};
+    $('alerts').append(d);
+  }
+  $('pbar').max=fr.length-1;$('pbar').disabled=false;$('pplay').disabled=false;
+  drawMarks(alerts);show();setPlaying(true);
+}
+poll();
+</script>

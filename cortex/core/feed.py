@@ -27,7 +27,7 @@ PROMPT = ("You are a home security camera on a small robot; its person detector 
 
 
 class Feed:
-    def __init__(self, rt, og=None, model=None, clip_s=60, fps=2, upload=True, folder=FEED):
+    def __init__(self, rt, og=None, model=None, clip_s=60, fps=5, upload=True, folder=FEED):
         self.rt, self.og, self.model, self.clip_s, self.fps, self.upload = rt, og, model, clip_s, fps, upload
         self.dir = pathlib.Path(folder)
         self.dir.mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,4 @@
-"""Web API + UI: / landing page (3D), /app control room. Voice: browser speech or WAV -> 0G -> task."""
+"""Web API + UI: / landing page (3D), /login, /app control room, /recordings. Voice: browser speech or WAV -> 0G -> task."""
 import os
 import pathlib
 import re
@@ -7,7 +7,7 @@ import time
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .og_client import OGError
@@ -17,11 +17,19 @@ ROBOT_PKG = pathlib.Path(__file__).resolve().parents[1] / "adapters" / "hexapod_
 
 
 LOCAL = {"127.0.0.1", "localhost", "[::1]"}
+COOKIE = "skitter_session"
+OPEN = ("/api/login", "/api/estop")  # no session needed: you can't have one yet / stopping is never locked
+MAX_FAILS, LOCKOUT_S = 5, 30
 
 
 def create_app(rt, og, feed=None):
     app = FastAPI()
     token = secrets.token_urlsafe(24)  # per run; only the served control room page knows it
+    password = os.environ.get("SKITTER_PASSWORD") or ""
+    if not password:
+        password = secrets.token_urlsafe(9)
+        print(f"\n  SKITTER_PASSWORD not set; control room password for this run:  {password}\n", flush=True)
+    sessions, fails, locked = set(), [0], [0.0]
     last, blocked = {}, [0]
 
     def sec(level, msg, key=None):
@@ -35,6 +43,7 @@ def create_app(rt, og, feed=None):
 
     sec("ok", "control API bound to 127.0.0.1; requests with a foreign Host header are refused")
     sec("ok", "per-run control token issued; only the /app page receives it")
+    sec("ok", f"control room and camera need the password; {MAX_FAILS} wrong tries lock login for {LOCKOUT_S} s")
     key_ok = re.fullmatch(r"[0-9a-fA-F]{64}", os.environ.get("EPISODE_KEY", "")) is not None
     sec("ok" if key_ok else "warn", "episodes sealed with AES-256-GCM before upload" if key_ok
         else "no valid EPISODE_KEY: episodes will NOT be uploaded (fails closed)")
@@ -51,28 +60,79 @@ def create_app(rt, og, feed=None):
         # Any website can POST to localhost; the custom token header forces a CORS preflight it can't pass.
         # E-STOP stays open on purpose: stopping must never be locked out.
         # Feed reads are locked too: they return decrypted footage of the home.
-        if (req.method == "POST" and req.url.path != "/api/estop") or req.url.path.startswith("/api/feed"):
+        # Login has no token yet, so only its Origin is checked.
+        path = req.url.path
+        if (req.method == "POST" and path != "/api/estop") or path.startswith("/api/feed"):
             origin = urlparse(req.headers.get("origin") or "http://localhost").hostname
             sent = req.headers.get("x-skitter-token")
-            why = ("foreign origin " + str(origin)[:60] if origin not in LOCAL else "no token" if not sent
-                   else "wrong token" if not secrets.compare_digest(sent, token) else None)
+            why = ("foreign origin " + str(origin)[:60] if origin not in LOCAL else None if path == "/api/login"
+                   else "no token" if not sent else "wrong token" if not secrets.compare_digest(sent, token) else None)
             if why:
-                sec("block", f"refused {req.method} {req.url.path}: {why} (CSRF?)", why)
+                sec("block", f"refused {req.method} {path}: {why} (CSRF?)", why)
                 return JSONResponse({"error": "forbidden"}, status_code=403)
+        if path.startswith("/api/") and path not in OPEN and req.cookies.get(COOKIE) not in sessions:
+            return JSONResponse({"error": "login required"}, status_code=401)
         return await call_next(req)
 
     @app.get("/")
     def home():
         return FileResponse(WEB / "home.html")
 
-    mark = '<meta charset="utf-8">'
-    room = (WEB / "index.html").read_text(encoding="utf-8")
-    assert mark in room, "index.html lost its charset meta: the control room would get no token"
-    room = room.replace(mark, f'{mark}\n<meta name="skitter-token" content="{token}">', 1)
+    @app.get("/login")
+    def login_page(req: Request, next: str = "/app"):
+        if req.cookies.get(COOKIE) in sessions:
+            return RedirectResponse(next if next in ("/app", "/recordings") else "/app", status_code=303)
+        return FileResponse(WEB / "login.html")
 
-    @app.get("/app")
-    def control_room():
-        return HTMLResponse(room, headers={"Cache-Control": "no-store"})
+    @app.post("/api/login")
+    async def login(req: Request):
+        if time.monotonic() < locked[0]:
+            sec("block", "refused login: locked out after repeated wrong passwords", "locked")
+            return JSONResponse({"error": "too many tries, wait"}, status_code=429)
+        try:
+            sent = str((await req.json()).get("password", ""))
+        except Exception:
+            return JSONResponse({"error": "bad json"}, status_code=400)
+        if not secrets.compare_digest(sent.encode(), password.encode()):
+            fails[0] += 1
+            sec("block", "refused login: wrong password", "login")
+            if fails[0] >= MAX_FAILS:
+                fails[0], locked[0] = 0, time.monotonic() + LOCKOUT_S
+                sec("block", f"login locked for {LOCKOUT_S} s after {MAX_FAILS} wrong passwords", "lockout")
+            return JSONResponse({"error": "wrong password"}, status_code=401)
+        fails[0] = 0
+        sid = secrets.token_urlsafe(32)
+        sessions.add(sid)
+        sec("ok", "control room unlocked (new session)")
+        r = JSONResponse({"ok": True})
+        r.set_cookie(COOKIE, sid, httponly=True, samesite="strict", path="/")
+        return r
+
+    @app.post("/api/logout")
+    def logout(req: Request):
+        sessions.discard(req.cookies.get(COOKIE))
+        r = JSONResponse({"ok": True})
+        r.delete_cookie(COOKIE, path="/")
+        return r
+
+    mark = '<meta charset="utf-8">'
+    assert mark in (WEB / "index.html").read_text(encoding="utf-8"), \
+        "index.html lost its charset meta: the control room would get no token"
+
+    def private_page(name, url):
+        def serve(req: Request):
+            if req.cookies.get(COOKIE) not in sessions:
+                return RedirectResponse(f"/login?next={url}", status_code=303)
+            f = WEB / name
+            html = f.read_text(encoding="utf-8") if f.exists() else ""
+            if mark not in html:
+                return HTMLResponse("page not available", status_code=404)
+            html = html.replace(mark, f'{mark}\n<meta name="skitter-token" content="{token}">', 1)
+            return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+        app.get(url)(serve)
+
+    private_page("index.html", "/app")
+    private_page("recordings.html", "/recordings")
 
     app.mount("/pkg", StaticFiles(directory=ROBOT_PKG), name="pkg")  # URDF + meshes for the 3D landing page
 

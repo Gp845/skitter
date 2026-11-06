@@ -1,4 +1,5 @@
-"""Security checks, no 0G calls: control API lock-down (CSRF, DNS rebinding, token) and episode sealing."""
+"""Security checks, no 0G calls: control API lock-down (login, CSRF, DNS rebinding, token) and episode sealing."""
+import json
 import os
 import pathlib
 import re
@@ -13,12 +14,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import uvicorn  # noqa: E402
 
 from cortex.core import episode as ep  # noqa: E402
-from cortex.core.server import create_app  # noqa: E402
+from cortex.core.server import COOKIE, MAX_FAILS, create_app  # noqa: E402
 
 
 class Runtime:  # just what the tested routes touch
     def __init__(self):
         self.commands, self.stops, self.events = [], 0, []
+        self.frame = b"\xff\xd8 not really a jpeg"
+        self.ex = type("Executor", (), {"state": "IDLE"})()
 
     def emit(self, e):
         self.events.append(e)
@@ -32,46 +35,92 @@ class Runtime:  # just what the tested routes touch
 
 rt = Runtime()
 PORT = 3917
+PASSWORD = "correct horse battery"
+os.environ["SKITTER_PASSWORD"] = PASSWORD
 server = uvicorn.Server(uvicorn.Config(create_app(rt, og=None), host="127.0.0.1", port=PORT, log_level="error"))
 threading.Thread(target=server.run, daemon=True).start()
 while not server.started:
     time.sleep(0.05)
 
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *a, **k):
+        return None
+
+
+open_ = urllib.request.build_opener(NoRedirect).open
+
+
 def req(path, method="GET", body=b"", **headers):
     r = urllib.request.Request(f"http://127.0.0.1:{PORT}{path}", data=body if method == "POST" else None,
                                method=method, headers=headers)
-    try:
-        with urllib.request.urlopen(r) as resp:
-            return resp.status, resp.read().decode()
-    except urllib.error.HTTPError as e:
-        return e.code, e.read().decode()
+    for attempt in range(5):
+        try:
+            with open_(r) as resp:
+                return resp.status, resp.read().decode(errors="replace"), resp.headers
+        except urllib.error.HTTPError as e:
+            return e.code, e.read().decode(errors="replace"), e.headers
+        except ConnectionError:  # Windows: an early refusal closes the socket with the body unread (RST)
+            if attempt == 4:
+                raise
+
+
+def login(pw, **headers):
+    return req("/api/login", "POST", json.dumps({"password": pw}).encode(), **{"Content-Type": "application/json", **headers})
 
 
 cmd = b'{"text": "walk to the stairs"}'
-checks = {
-    # a web page you visit can send a "simple" cross-site POST (text/plain) to localhost without any preflight
-    "CSRF text/plain POST, no token": req("/api/command", "POST", cmd, **{"Content-Type": "text/plain",
-                                                                         "Origin": "https://evil.example"})[0] == 403,
-    "JSON POST without token": req("/api/command", "POST", cmd, **{"Content-Type": "application/json"})[0] == 403,
-    "DNS rebinding (foreign Host)": req("/app", Host="evil.example:3917")[0] == 403,
-}
-status, page = req("/app")
+s, _, h = req("/app")
+checks = {"/app without login redirects to /login": s == 303 and h["Location"] == "/login?next=/app"}
+s, _, h = req("/recordings")
+checks["/recordings without login redirects to /login"] = s == 303 and h["Location"] == "/login?next=/recordings"
+checks["camera frame without login"] = req("/api/frame")[0] == 401
+checks["status without login"] = req("/api/status")[0] == 401
+checks["login page is public"] = req("/login")[0] == 200
+checks["wrong password"] = login("guess")[0] == 401
+checks["login from a foreign origin"] = login(PASSWORD, Origin="https://evil.example")[0] == 403
+s, _, h = login(PASSWORD, Origin=f"http://localhost:{PORT}")
+cookie = h.get("Set-Cookie", "")
+checks["right password: HttpOnly, SameSite=Strict session cookie"] = (
+    s == 200 and cookie.startswith(COOKIE + "=") and "httponly" in cookie.lower() and "samesite=strict" in cookie.lower())
+me = {"Cookie": cookie.split(";")[0]}
+
+# a web page you visit can send a "simple" cross-site POST (text/plain) to localhost without any preflight
+checks["CSRF text/plain POST, no token"] = req("/api/command", "POST", cmd, **me, **{
+    "Content-Type": "text/plain", "Origin": "https://evil.example"})[0] == 403
+checks["JSON POST without token"] = req("/api/command", "POST", cmd, **me, **{"Content-Type": "application/json"})[0] == 403
+checks["DNS rebinding (foreign Host)"] = req("/app", Host="evil.example:3917", **me)[0] == 403
+status, page, _ = req("/app", **me)
 token = re.search(r'name="skitter-token" content="([^"]+)"', page).group(1)
-checks["token + foreign Origin"] = req("/api/command", "POST", cmd, **{"X-Skitter-Token": token,
-                                                                     "Origin": "https://evil.example"})[0] == 403
-checks["wrong token"] = req("/api/command", "POST", cmd, **{"X-Skitter-Token": token[:-1] + "x"})[0] == 403
-checks["control room with token"] = req("/api/command", "POST", cmd, **{"X-Skitter-Token": token,
-                                                                      "Origin": f"http://localhost:{PORT}"})[0] == 200
-checks["E-STOP never locked"] = req("/api/estop", "POST", Origin="https://evil.example")[0] == 200
+checks["/recordings with login is not redirected"] = req("/recordings", **me)[0] != 303
+checks["token + foreign Origin"] = req("/api/command", "POST", cmd, **me, **{"X-Skitter-Token": token,
+                                                                           "Origin": "https://evil.example"})[0] == 403
+checks["wrong token"] = req("/api/command", "POST", cmd, **me, **{"X-Skitter-Token": token[:-1] + "x"})[0] == 403
+checks["token without login"] = req("/api/command", "POST", cmd, **{"X-Skitter-Token": token})[0] == 401
+checks["feed with token, without login"] = req("/api/feed", **{"X-Skitter-Token": token})[0] == 401
+checks["feed with token + login"] = req("/api/feed", **me, **{"X-Skitter-Token": token})[0] == 200
+checks["camera frame with login"] = req("/api/frame", **me)[:2] == (200, rt.frame.decode(errors="replace"))
+checks["control room with token"] = req("/api/command", "POST", cmd, **me, **{"X-Skitter-Token": token,
+                                                                            "Origin": f"http://localhost:{PORT}"})[0] == 200
+checks["E-STOP never locked (no login, no token)"] = req("/api/estop", "POST", Origin="https://evil.example")[0] == 200
 checks["only the real command got through"] = rt.commands == ["walk to the stairs"] and rt.stops == 1
-log = [e["msg"] for e in rt.events if e["type"] == "security"]
-checks["every refusal kind + E-STOP in the security log"] = all(
-    any(s in m for m in log) for s in ("foreign Host", "no token", "wrong token", "foreign origin", "E-STOP"))
 n = len(rt.events)
 for _ in range(50):  # a hostile page hammering the API
     req("/api/command", "POST", cmd, **{"Content-Type": "application/json"})
 checks["request flood does not flood the log"] = len(rt.events) == n
+
+checks["logout needs the token"] = req("/api/logout", "POST", **me)[0] == 403
+checks["logout"] = req("/api/logout", "POST", **me, **{"X-Skitter-Token": token})[0] == 200
+checks["session dead after logout"] = req("/api/frame", **me)[0] == 401 and req("/app", **me)[0] == 303
+checks["E-STOP after logout"] = req("/api/estop", "POST")[0] == 200 and rt.stops == 2
+
+tries = [login("guess")[0] for _ in range(MAX_FAILS)]
+checks[f"lockout: {MAX_FAILS} wrong, then even the right password is refused"] = (
+    tries == [401] * MAX_FAILS and login(PASSWORD)[0] == 429)
+log = [e["msg"] for e in rt.events if e["type"] == "security"]
+checks["every refusal kind, login, lockout + E-STOP in the security log"] = all(
+    any(s in m for m in log) for s in ("foreign Host", "no token", "wrong token", "foreign origin", "E-STOP",
+                                       "wrong password", "unlocked", "login locked"))
 
 # sealing: round trip, tamper detection, wrong key, no key = no upload
 os.environ["EPISODE_KEY"] = "11" * 32
@@ -102,4 +151,4 @@ for name, ok in checks.items():
     print(f"{'PASS' if ok else 'FAIL'}  {name}")
 server.should_exit = True
 assert all(checks.values()), "security checks failed"
-print("security OK")
+print(f"security OK ({len(checks)}/{len(checks)})")

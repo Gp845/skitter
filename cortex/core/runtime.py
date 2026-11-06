@@ -47,7 +47,8 @@ class Runtime:
             return [e for e in self.events if e["i"] > i], self._n
 
     def _refresh_frame(self):
-        if time.monotonic() - self._last_frame > 0.2:
+        # an idle render costs ~130 ms; while moving the adapter reuses the frame its skill already rendered
+        if time.monotonic() - self._last_frame > (0.1 if self.adapter.busy() else 0.2):
             self.frame = self.adapter.get_frame()
             st = self.adapter.state()
             self.pose = {k: round(st[k], 3) for k in ("x", "y", "yaw")}

@@ -19,9 +19,15 @@
   h1{font:400 clamp(64px,10vw,140px)/.85 var(--brush);margin:0;letter-spacing:-.02em}
   h1 b{color:var(--red);font-weight:400}
   .brand p{margin:14px 0 0;max-width:360px;color:var(--muted);font-size:15px}
-  .cta{position:fixed;right:40px;top:36px;background:var(--red);color:var(--cream);text-decoration:none;
+  .ctas{position:fixed;right:40px;top:36px;display:flex;gap:14px}
+  .cta{background:var(--red);color:var(--cream);text-decoration:none;outline:none;
     font:400 20px var(--brush);padding:12px 22px;clip-path:polygon(0 6%,4% 0,97% 4%,100% 50%,98% 96%,3% 100%,1% 60%)}
-  .cta:hover{background:var(--cream);color:var(--ink)}
+  .cta+.cta{clip-path:polygon(1% 2%,6% 5%,98% 0,99% 55%,100% 100%,4% 96%,0 45%)}
+  .cta:hover,.cta:focus-visible,.cta.on{background:var(--cream);color:var(--ink)}
+  #mission{position:fixed;right:40px;top:98px;max-width:440px;text-align:right;font:500 12px/1.6 var(--mono);letter-spacing:.08em;
+    color:var(--cream);opacity:0;transition:opacity .4s}
+  #mission.on{opacity:1}
+  #mission b{color:var(--red);font-weight:500}
   .hud{position:fixed;left:40px;bottom:30px;font:500 12px var(--mono);letter-spacing:.18em;color:var(--muted)}
   .hud b{color:var(--red);font-weight:500}
   .hud ol{list-style:none;margin:8px 0 0;padding:0;display:flex;gap:14px;flex-wrap:wrap;max-width:520px}
@@ -53,9 +59,10 @@
   <h1>Skit<b>ter</b></h1>
   <p>A six-legged home security robot. It patrols, records, and seals every frame on 0G, so nobody can quietly edit the tape. Follow it around the dark: every place it reaches lights up.</p>
 </div>
-<a class="cta" href="/app">Open control room →</a>
+<nav class="ctas"><a class="cta" href="/login?next=/app" data-go="app">Control room →</a><a class="cta" href="/login?next=/recordings" data-go="rec">Recordings →</a></nav>
+<div id="mission" aria-live="polite"></div>
 <div class="hud">PLACES LIT <b id="count">0</b> / <span id="total">0</span><ol id="list"></ol></div>
-<div class="hint">DRAG TO LOOK · CLICK A LIT PLACE</div>
+<div class="hint">DRAG TO LOOK · CLICK A LIT PLACE OR A BUTTON</div>
 <aside id="panel"><div class="n" id="pn"></div><h2 id="pt"></h2><p id="pb"></p><small id="pd"></small></aside>
 <div id="load">WAKING SKITTER… <span id="pct">0</span>%</div>
 
@@ -158,14 +165,26 @@ addEventListener('resize',resize);resize();
 // ---------- places ----------
 function wrap(g,text,x,y,w,lh){let line='';for(const word of text.split(' ')){const tryL=line?line+' '+word:word;
   if(g.measureText(tryL).width>w&&line){g.fillText(line,x,y);y+=lh;line=word;}else line=tryL;}g.fillText(line,x,y);}
-function cardTexture(i,p){
-  const c=document.createElement('canvas');c.width=1024;c.height=640;const g=c.getContext('2d');
+function paper(h){  // cream sheet with torn edges, 1024 wide
+  const c=document.createElement('canvas');c.width=1024;c.height=h;const g=c.getContext('2d');
   g.fillStyle='#e8e3d6';g.beginPath();g.moveTo(0,18);
   for(let x=0;x<=1024;x+=32)g.lineTo(x,6+Math.random()*22);
-  for(let y=0;y<=640;y+=40)g.lineTo(1024-Math.random()*10,y);
-  for(let x=1024;x>=0;x-=32)g.lineTo(x,640-6-Math.random()*22);
-  for(let y=640;y>=0;y-=40)g.lineTo(Math.random()*10,y);
-  g.closePath();g.fill();
+  for(let y=0;y<=h;y+=40)g.lineTo(1024-Math.random()*10,y);
+  for(let x=1024;x>=0;x-=32)g.lineTo(x,h-6-Math.random()*22);
+  for(let y=h;y>=0;y-=40)g.lineTo(Math.random()*10,y);
+  g.closePath();g.fill();return [c,g];
+}
+function signTexture(s){
+  const [c,g]=paper(512);
+  g.fillStyle='#eb1716';g.font='500 30px "JetBrains Mono"';g.fillText(s.tag,64,92);
+  let fs=176;do g.font=`${fs-=8}px "Permanent Marker"`;while(g.measureText(s.label).width>900);
+  g.fillStyle='#0b0b0b';g.fillText(s.label,56,270);
+  g.fillStyle='#eb1716';g.fillRect(64,300,g.measureText(s.label).width*.55,9);
+  g.fillStyle='#0b0b0b';g.font='34px "Space Grotesk"';wrap(g,s.blurb,64,372,880,46);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t;
+}
+function cardTexture(i,p){
+  const [c,g]=paper(640);
   g.fillStyle='#eb1716';g.font='500 32px "JetBrains Mono"';g.fillText(`${String(i+1).padStart(2,'0')} / ${String(N).padStart(2,'0')}`,64,104);
   g.fillStyle='#0b0b0b';g.font='150px "Permanent Marker"';g.fillText(p.k,58,280);
   g.fillStyle='#eb1716';g.fillRect(64,310,g.measureText(p.k).width*.6,8);
@@ -207,11 +226,11 @@ function light(s){
   document.getElementById('count').textContent=places.filter(x=>x.lit).length;
 }
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();let downXY=null;
-function pick(e){  // place under the pointer: any part of it, or the floor within 1 m of it
+function pick(e){  // place under the pointer: any part of it, or the floor within 1 m of it; or a staircase {climb}
   mouse.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(mouse,camera);
-  const hit=ray.intersectObjects([...places.map(s=>s.grp),ground],true)[0];
+  const hit=ray.intersectObjects([...places.map(s=>s.grp),...CLIMBS.filter(c=>c.grp).map(c=>c.grp),ground],true)[0];
   if(!hit)return null;
-  for(let o=hit.object;o;o=o.parent)if(o.userData.i!==undefined)return places[o.userData.i];
+  for(let o=hit.object;o;o=o.parent){if(o.userData.i!==undefined)return places[o.userData.i];if(o.userData.c)return {climb:o.userData.c};}
   let best=null,bd=1;
   for(const s of places){const d=s.grp.position.distanceTo(hit.point.setY(0));if(d<bd){bd=d;best=s;}}
   return best;
@@ -220,7 +239,7 @@ canvas.addEventListener('pointerdown',e=>downXY=[e.clientX,e.clientY]);
 canvas.addEventListener('pointermove',e=>{if(e.buttons)return;const s=pick(e);canvas.style.cursor=s?'pointer':'';});
 canvas.addEventListener('click',e=>{
   if(!downXY||Math.hypot(e.clientX-downXY[0],e.clientY-downXY[1])>5)return;
-  const s=pick(e);if(s)show(s.i);else panel.classList.remove('on');
+  const s=pick(e);if(s?.climb)mission(s.climb.key);else if(s)show(s.i);else panel.classList.remove('on');
 });
 
 // ---------- props (kept off the walking loop: it runs between r=1.34 and r=1.45) ----------
@@ -240,11 +259,29 @@ function buildProps(){
   box(.82,.06,.7,0,0,0,MAT.concrete,sg);box(.3,.06,.7,0,.06,0,MAT.concrete,sg);
   // centre: rug only (the camera sits above it)
   const rug=new THREE.Mesh(new THREE.CircleGeometry(.85,48),MAT.rug);rug.rotation.x=-Math.PI/2;rug.position.y=.003;scene.add(rug);
-  // big staircase climbing away from the loop
-  const st=at(3.3,gap(0));
-  for(let s=0;s<5;s++)box(1.1,.12*(s+1),.3,0,0,-s*.3,MAT.concrete,st);
-  box(1.1,.6,.8,0,0,-1.9,MAT.concrete,st);
-  [-.57,.57].forEach(x=>{box(.03,.9,.03,x,0,-.6,MAT.cream,st);box(.03,.03,1.55,x,.9,-.6,MAT.cream,st).rotation.x=-.38;});
+  // the two climbs out through gaps 8 and 0: steps, platform, push-button and sign (local -z = along, outward)
+  CLIMBS.forEach(c=>{
+    const g=at(R0,c.a);g.userData.c=c;c.grp=g;
+    for(let k=0;k<=NSTEP;k++){
+      if(k<NSTEP)box(SW,RISE*(k+1),TREAD,0,0,-(k+.5)*TREAD,MAT.concrete,g);
+      box(SW,.004,.03,0,RISE*(k+1),-k*TREAD-.015,MAT.cream,g);
+      [-1,1].forEach(sx=>box(.03,.32,.03,sx*(SW/2-.02),RISE*(k+1),-k*TREAD-.06,MAT.cream,g));
+    }
+    box(SW,PH,PLAT,0,0,-(NSTEP*TREAD+PLAT/2),MAT.concrete,g);
+    [-1,1].forEach(sx=>{const L=Math.hypot(NSTEP*TREAD,PH-RISE),r=box(.03,.03,L,sx*(SW/2-.02),0,0,MAT.cream,g);
+      r.position.set(sx*(SW/2-.02),RISE+.32+(PH-RISE)/2,-(NSTEP*TREAD/2+.06));r.rotation.x=Math.atan2(PH-RISE,NSTEP*TREAD);});
+    box(.34,.2,.16,0,PH,-(BTN+.13),MAT.cream,g);
+    c.btnMat=M(0x3a0606,{emissive:0xeb1716,roughness:.4});
+    c.btn=new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.05,32),c.btnMat);c.btn.rotation.x=Math.PI/2;c.btn.position.set(0,PH+.09,-(BTN+.025));g.add(c.btn);
+    c.ringMat=new THREE.MeshBasicMaterial({color:0xeb1716,transparent:true,opacity:.5});
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(.085,.008,8,48),c.ringMat);ring.position.set(0,PH+.09,-(BTN+.045));g.add(ring);
+    [-.56,.56].forEach(x=>box(.04,.95,.04,x,PH,-(PH0+.03),plinthMat,g));
+    box(1.24,.64,.02,0,PH+.3,-(PH0+.02),plinthMat,g);
+    const tex=signTexture(c);c.signMat=new THREE.MeshStandardMaterial({map:tex,emissive:0xffffff,emissiveMap:tex,emissiveIntensity:.6,roughness:.85});
+    const sign=new THREE.Mesh(new THREE.PlaneGeometry(1.2,.6),c.signMat);sign.position.set(0,PH+.62,-PH0);g.add(sign);
+    c.lamp=new THREE.PointLight(0xffdcb4,2,3.2,1.6);c.lamp.position.set(0,PH+1.0,-(NSTEP*TREAD+.2));g.add(c.lamp);
+    c.glow=new THREE.PointLight(0xeb1716,.6,1,2);c.glow.position.set(0,PH+.15,-(BTN-.2));g.add(c.glow);
+  });
   // crate stack
   const cs=at(3.2,gap(2));
   box(.5,.5,.5,-.3,0,0,MAT.crate,cs,.1);box(.5,.5,.5,.3,0,-.05,MAT.crate,cs,-.15);box(.45,.45,.45,0,.5,0,MAT.crate,cs,.3);
@@ -286,12 +323,55 @@ function stairGround(x,z){  // height of the stair top under world (x, z)
   return lz>.35?0:lx<.15?.12:lx<.41?.06:0;
 }
 console.assert(stairGround(1e9,0)===.12&&stairGround(1e9+.3,0)===.06&&stairGround(1e9+.5,0)===0&&stairGround(1e9,.4)===0,'stairGround');
+// climbs to the two destinations: head-on, 6 cm risers, 55 cm treads, then a platform with the button
+const R0=2.7,TREAD=.55,RISE=.06,NSTEP=3,PLAT=1.0,SW=.9,PH=RISE*(NSTEP+1),PRESS=NSTEP*TREAD+.4,BTN=PRESS+.29,PH0=NSTEP*TREAD+PLAT-.05;
+const CLIMBS=[['app','CONTROL ROOM','/login?next=/app','the control room','UPSTAIRS · LIVE VIEW',0,'Watch it live, talk to it, hit E-STOP. Click: Skitter climbs up and presses the button.'],
+  ['rec','RECORDINGS','/login?next=/recordings','the recordings','UPSTAIRS · SEALED ON 0G',8,'Every clip, checked against 0G before it plays. Click: Skitter climbs up and presses the button.']]
+  .map(([key,label,href,name,tag,gap,blurb])=>{const a=-Math.PI/2+(gap+.5)*2*Math.PI/N;
+    return {key,label,href,name,tag,blurb,a,ux:Math.cos(a),uz:Math.sin(a),press:0,flash:0};});
+const climbLocal=(c,x,z)=>[x*c.ux+z*c.uz-R0,z*c.ux-x*c.uz];  // (along from the first riser, outward; across)
+const cpt=(c,al)=>[c.ux*(R0+al),c.uz*(R0+al)];
+function climbGround(c,x,z){
+  const [al,ac]=climbLocal(c,x,z);
+  return Math.abs(ac)>SW/2||al<0||al>NSTEP*TREAD+PLAT?0:RISE*Math.min(NSTEP+1,1+Math.floor(al/TREAD));
+}
+const groundAt=(x,z)=>Math.max(stairGround(x,z),...CLIMBS.map(c=>climbGround(c,x,z)));
+for(const c of CLIMBS){const h=al=>groundAt(...cpt(c,al)),[sx,sz]=cpt(c,.3);
+  console.assert(h(-.05)===0&&Math.abs(h(.3)-.06)<1e-9&&Math.abs(h(.8)-.12)<1e-9&&Math.abs(h(1.4)-.18)<1e-9&&Math.abs(h(PRESS)-PH)<1e-9
+    &&h(NSTEP*TREAD+PLAT+.05)===0&&groundAt(sx-c.uz*.5,sz+c.ux*.5)===0,'climbGround '+c.key);}
+console.assert(groundAt(0,0)===0&&groundAt(R_PATH*Math.cos(-Math.PI/2),R_PATH*Math.sin(-Math.PI/2))===0,'groundAt');
 
 // ---------- robot ----------
 const rig=new THREE.Group();scene.add(rig);
 let robot=null;
 const START=-Math.PI/2-2*Math.PI/N;  // on the loop, one place before the first
-const bot={x:R_PATH*Math.cos(START),z:R_PATH*Math.sin(START),yaw:Math.PI/2,gz:0,crab:0,vx:0,wz:0,t:0,target:0,mode:'walk',wait:0};
+const bot={x:R_PATH*Math.cos(START),z:R_PATH*Math.sin(START),yaw:Math.PI/2,gz:0,crab:0,vx:0,wz:0,t:0,target:0,mode:'walk',wait:0,
+  route:[],goal:null,climb:null,lift:0,boost:1};
+const Q=new URLSearchParams(location.search),nonav=Q.has('nonav');  // ?go=app|rec starts a mission, ?nonav stays on the page
+const hudM=document.getElementById('mission');
+function leave(c){if(!nonav)location.href=c.href;}
+function mission(key){  // send Skitter up the stairs to press the button; a second click (or Enter) skips
+  const c=CLIMBS.find(o=>o.key===key);
+  if(!robot||!robot.parent){leave(c);return;}
+  if(bot.goal===c){leave(c);return;}
+  const r=[];
+  for(const o of CLIMBS){const [al,ac]=climbLocal(o,bot.x,bot.z);
+    if(o!==c&&al>-.3&&Math.abs(ac)<.6)r.push(cpt(o,-.25),cpt(o,-.95));}
+  const [al,ac]=climbLocal(c,bot.x,bot.z);
+  for(const w of [-.95,-.25,PRESS])if(w===PRESS||!(Math.abs(ac)<.5&&al>w))r.push(cpt(c,w));
+  Object.assign(bot,{route:r,goal:c,climb:c,mode:'go',lift:0,flashed:false});userT=-1e9;
+  document.querySelectorAll('.cta').forEach(a=>a.classList.toggle('on',a.dataset.go===key));
+}
+function home(c){  // back down to the loop
+  Object.assign(bot,{route:[cpt(c,-.25),cpt(c,-.95)],goal:null,mode:'go',lift:0});
+  document.querySelectorAll('.cta').forEach(a=>a.classList.remove('on'));
+}
+document.querySelectorAll('.cta').forEach(a=>a.addEventListener('click',e=>{
+  if(e.button||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey||!robot||!robot.parent)return;
+  e.preventDefault();mission(a.dataset.go);
+}));
+addEventListener('keydown',e=>{if(e.key==='Enter'&&bot.goal&&!e.target.closest?.('.cta'))leave(bot.goal);});
+addEventListener('pageshow',e=>{if(e.persisted&&bot.goal)home(bot.goal);});
 const manager=new THREE.LoadingManager();
 manager.onProgress=(_u,done,total)=>document.getElementById('pct').textContent=Math.round(100*done/Math.max(total,1));
 manager.onLoad=()=>{if(robot)wake();};
@@ -318,7 +398,8 @@ function wake(){
   const rim=new THREE.PointLight(0xffe6c8,.6,1.2,1.5);rim.position.set(-.1,.35,.15);rig.add(rim);
   beam.position.copy(spot.position);rig.add(beam);rig.updateMatrixWorld(true);
   beam.lookAt(spot.target.getWorldPosition(new THREE.Vector3()));
-  const ff=+new URLSearchParams(location.search).get('ff')||0;  // ?ff=60 skips ahead 60 s (screenshots)
+  const ff=+Q.get('ff')||0;  // ?ff=60 skips ahead 60 s (screenshots)
+  if(Q.get('go'))mission(Q.get('go'));
   for(let i=0;i<ff*30;i++)drive(1/30);
   aim();camera.position.copy(camGoal);controls.target.copy(lookGoal);
   const load=document.getElementById('load');load.style.opacity=0;setTimeout(()=>load.remove(),900);
@@ -327,10 +408,22 @@ function wake(){
 // ---------- loop ----------
 const wrapA=a=>Math.atan2(Math.sin(a),Math.cos(a));
 const camGoal=new THREE.Vector3(),lookGoal=new THREE.Vector3();
+const clamp1=v=>Math.max(-1,Math.min(1,v));
 function drive(dt){
-  const s=places[bot.target];
+  const s=places[bot.target],c=bot.climb;
   let vx=0,wz=0;
-  if(bot.mode==='walk'){
+  if(bot.mode==='go'){
+    const [px,pz]=bot.route[0],dx=px-bot.x,dz=pz-bot.z,dist=Math.hypot(dx,dz),last=bot.route.length===1&&bot.goal;
+    const err=wrapA(Math.atan2(-dz,dx)-bot.yaw);
+    wz=clamp1(err*2.5);vx=(Math.abs(err)<.5?1:.15)*(last?Math.min(1,dist/.25):1);
+    if(dist<(last?.03:.15)){bot.route.shift();if(!bot.route.length){if(bot.goal)Object.assign(bot,{mode:'press',wait:0});else bot.mode='walk';}}
+  }else if(bot.mode==='press'){  // square up, lift the front leg into the button, flash, go
+    wz=clamp1(wrapA(Math.atan2(-c.uz,c.ux)-bot.yaw)*2.5);const t=bot.wait+=dt;
+    bot.lift=t<.35?Math.sin(t/.35*Math.PI/2):t<.7?1:Math.max(0,1-(t-.7)/.3);
+    c.press=Math.max(0,(bot.lift-.6)/.4);
+    if(t>=.35&&!bot.flashed){bot.flashed=true;c.flash=1;}
+    if(t>=.9){leave(c);home(c);}
+  }else if(bot.mode==='walk'){
     const dx=s.path.x-bot.x,dz=s.path.z-bot.z,dist=Math.hypot(dx,dz);
     const err=wrapA(Math.atan2(-dz,dx)-bot.yaw);
     wz=Math.max(-1,Math.min(1,err*2.5));vx=(Math.abs(err)<.5?1:.15)*Math.min(1,dist/.25);
@@ -345,14 +438,23 @@ function drive(dt){
   // near the stairs: turn side-on (body 90 deg right of travel) and crab, like the sim on shallow treads
   const [sx,sz]=stairLocal(bot.x,bot.z),near=sx<.55&&sz<.35&&bot.mode==='walk'?1:0;
   bot.crab+=(near-bot.crab)*Math.min(1,dt*4);
-  const v=bot.vx*STEP/(.5*CYCLE)*(1-.6*Math.abs(near-bot.crab)),w=bot.wz*1.1;  // slow while turning side-on
-  bot.yaw+=w*dt;bot.x+=Math.cos(bot.yaw)*v*dt;bot.z-=Math.sin(bot.yaw)*v*dt;bot.t+=dt;
+  bot.boost+=((bot.goal?3:1)-bot.boost)*Math.min(1,dt*3);  // missions scurry: faster cadence, same stride
+  const B=bot.boost,v=bot.vx*STEP/(.5*CYCLE)*(1-.6*Math.abs(near-bot.crab))*B,w=bot.wz*1.1*B;  // slow while turning side-on
+  bot.yaw+=w*dt;bot.x+=Math.cos(bot.yaw)*v*dt;bot.z-=Math.sin(bot.yaw)*v*dt;bot.t+=dt*B;
   const body={x:bot.x,z:bot.z,yaw:bot.yaw-bot.crab*Math.PI/2,gz:bot.gz};
-  const gm=pose(robot,bot.t,bot.vx,bot.wz,stairGround,body,bot.crab);
-  bot.gz+=(gm-bot.gz)*Math.min(1,dt*5);
+  const gm=pose(robot,bot.t,bot.vx,bot.wz,groundAt,body,bot.crab);
+  if(bot.lift>0){const L=bot.lift,[c0,f0,t0]=LEGS[0],[a1,a2,a3]=ik(REACH+.05*L*L,0,-BODY_H+PH-bot.gz+.09*L);
+    robot.setJointValue(c0,a1);robot.setJointValue(f0,a2);robot.setJointValue(t0,a3);}
+  bot.gz+=(gm-bot.gz)*Math.min(1,dt*5*B);
   rig.position.set(bot.x,bot.gz,bot.z);rig.rotation.y=body.yaw;
 }
 function aim(){
+  const c=bot.mode==='go'||bot.mode==='press'?bot.climb:null;
+  if(c){  // beside and behind the climb, looking up it; the robot runs into frame
+    const [al,ac]=climbLocal(c,bot.x,bot.z),rc=Math.max(-.3,R0+al-1.35),rl=Math.max(R0+al+.5,rc+1.2),y=Math.max(0,bot.gz);
+    camGoal.set(c.ux*rc-c.uz*.55,y+1.0,c.uz*rc+c.ux*.55);
+    lookGoal.set(c.ux*rl-c.uz*ac*.7,y+.3,c.uz*rl+c.ux*ac*.7);return;
+  }
   const u=new THREE.Vector3(bot.x,0,bot.z);const r=u.length();u.normalize();
   if(r<.1)u.set(Math.cos(bot.yaw),0,-Math.sin(bot.yaw));
   const side=new THREE.Vector3(-u.z,0,u.x);
@@ -362,15 +464,26 @@ function aim(){
 const clock=new THREE.Clock();
 function frame(){
   const dt=Math.min(.05,clock.getDelta());
-  if(robot&&robot.parent)drive(dt);
+  if(robot&&robot.parent&&!Q.has('freeze'))drive(dt);
   if(dust){dust.rotation.y+=dt*.01;dust.position.y=.05*Math.sin(clock.elapsedTime*.3);}
+  for(const c of CLIMBS)if(c.btn){
+    const p=.5+.5*Math.sin(clock.elapsedTime*3+c.a*4);
+    if(bot.mode!=='press'||bot.climb!==c)c.press=Math.max(0,c.press-dt*3);
+    c.flash=Math.max(0,c.flash-dt*2);
+    c.btn.position.z=-(BTN+.025)-.025*c.press;
+    c.btnMat.emissiveIntensity=.7+.9*p+5*c.flash;c.ringMat.opacity=.25+.5*p+.25*c.flash;
+    c.signMat.emissiveIntensity=.5+.15*p+.6*c.flash;c.glow.intensity=.4+.6*p+5*c.flash;c.lamp.intensity=1.8+.4*p+3*c.flash;
+  }
+  const g=bot.goal,msg=!g?'':bot.mode==='press'?`Skitter is pressing the ${g.label.toLowerCase()} button…`:
+    `Skitter is ${climbLocal(g,bot.x,bot.z)[0]>-.1?'climbing':'heading'} to ${g.name}… <b>(click again or press Enter to skip)</b>`;
+  if(msg&&hudM.innerHTML!==msg)hudM.innerHTML=msg;hudM.classList.toggle('on',!!msg);
   for(const s of places){
     s.glow+=((s.lit?1:0)-s.glow)*Math.min(1,dt*1.5);
     s.mat.emissiveIntensity=.85*s.glow;s.mat.color.setScalar(.17+.83*s.glow);
     s.barMat.emissiveIntensity=3*s.glow;s.lamp.intensity=2.2*s.glow;
   }
   if(performance.now()-userT>4000&&robot){
-    aim();const k=1-Math.exp(-dt*.8);camera.position.lerp(camGoal,k);controls.target.lerp(lookGoal,k);
+    aim();const k=1-Math.exp(-dt*(bot.mode==='go'||bot.mode==='press'?2.5:.8));camera.position.lerp(camGoal,k);controls.target.lerp(lookGoal,k);
   }
   if(panel.classList.contains('on')&&performance.now()-panelT>9000)panel.classList.remove('on');
   controls.update();renderer.render(scene,camera);requestAnimationFrame(frame);

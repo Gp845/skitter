@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skitter · unlock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Space+Grotesk:wght@400;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root{--cream:#e8e3d6;--ink:#0b0b0b;--red:#eb1716;--muted:#8a857a;
+        --brush:"Permanent Marker",cursive;--sans:"Space Grotesk",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font:14px/1.5 var(--sans);background:var(--ink);color:var(--cream);display:flex;flex-direction:column}
+  body:after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9;opacity:.09;mix-blend-mode:overlay;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  header{background:var(--cream);color:var(--ink);padding:28px 28px 60px;
+    clip-path:polygon(0 0,100% 0,100% 82%,96% 86%,91% 80%,85% 88%,78% 83%,71% 90%,64% 82%,57% 87%,50% 81%,
+      43% 89%,36% 83%,29% 88%,22% 81%,15% 87%,8% 82%,3% 88%,0 84%)}
+  header a{font:400 12px var(--mono);color:var(--ink);text-decoration:none;letter-spacing:.1em;text-transform:uppercase}
+  header a:hover{color:var(--red)}
+  h1{font:400 clamp(72px,12vw,150px)/.85 var(--brush);margin:18px 0 0;letter-spacing:-1px;transform:rotate(-2deg)}
+  h1 b{color:var(--red);font-weight:400}
+  .tag{font:700 13px var(--sans);letter-spacing:.35em;color:var(--red);margin-top:14px}
+  main{flex:1;display:flex;justify-content:center;padding:30px 28px}
+  form{width:min(420px,100%);display:flex;flex-direction:column;gap:18px}
+  label{font:400 11px var(--mono);color:var(--muted);letter-spacing:.2em;text-transform:uppercase}
+  input{font:400 18px var(--sans);padding:12px 14px;background:transparent;color:var(--cream);border:0;border-bottom:1.5px solid var(--muted)}
+  input:focus{border-bottom-color:var(--cream)}
+  button{font:400 22px var(--brush);border:0;cursor:pointer;padding:12px 22px;border-radius:2px;background:var(--red);color:#fff;
+    letter-spacing:.05em;transition:transform .12s;align-self:flex-start}
+  button:hover{transform:translateY(-2px) rotate(-1deg)}
+  button:disabled{opacity:.5;cursor:wait}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--red);outline-offset:3px}
+  #err{font:400 12px var(--mono);color:var(--red);min-height:18px}
+</style>
+<header>
+  <a href="/">← Home</a>
+  <h1>Skit<b>ter</b></h1>
+  <div class="tag">CONTROL ROOM · LOCKED</div>
+</header>
+<main>
+  <form id="f">
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password" autofocus required>
+    <div id="err"></div>
+    <button id="go">Unlock</button>
+  </form>
+</main>
+<script>
+const n=new URLSearchParams(location.search).get('next');
+const next=n==='/recordings'?'/recordings':'/app';
+const $=id=>document.getElementById(id);
+$('f').onsubmit=async e=>{
+  e.preventDefault();$('err').textContent='';$('go').disabled=true;
+  try{
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({password:$('pw').value})});
+    if(r.ok)return location.replace(next);
+    $('err').textContent=r.status===429?'Too many wrong tries. Wait 30 s.':r.status===401?'Wrong password.':'Refused ('+r.status+').';
+    $('pw').select();
+  }catch{$('err').textContent='Robot not reachable.'}
+  finally{$('go').disabled=false}
+};
+</script>
