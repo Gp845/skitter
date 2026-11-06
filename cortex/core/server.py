@@ -6,6 +6,8 @@ import secrets
 import time
 from urllib.parse import urlparse
 
+from eth_account import Account
+from eth_account.messages import encode_defunct
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -18,8 +20,11 @@ ROBOT_PKG = pathlib.Path(__file__).resolve().parents[1] / "adapters" / "hexapod_
 
 LOCAL = {"127.0.0.1", "localhost", "[::1]"}
 COOKIE = "skitter_session"
-OPEN = ("/api/login", "/api/estop")  # no session needed: you can't have one yet / stopping is never locked
+LOGIN = ("/api/login", "/api/login/nonce", "/api/login/wallet")
+OPEN = LOGIN + ("/api/estop",)  # no session needed: you can't have one yet / stopping is never locked
 MAX_FAILS, LOCKOUT_S = 5, 30
+NONCE_S = 300
+CHAIN_ID = 16602  # 0G Galileo testnet
 
 
 def create_app(rt, og, feed=None):
@@ -29,7 +34,9 @@ def create_app(rt, og, feed=None):
     if not password:
         password = secrets.token_urlsafe(9)
         print(f"\n  SKITTER_PASSWORD not set; control room password for this run:  {password}\n", flush=True)
-    sessions, fails, locked = set(), [0], [0.0]
+    hosts = LOCAL | {h.strip().lower() for h in os.environ.get("SKITTER_HOSTS", "").split(",") if h.strip()}
+    owners = {a.strip().lower() for a in os.environ.get("OWNER_WALLETS", "").split(",") if a.strip()}
+    sessions, fails, locked, nonces = set(), [0], [0.0], {}
     last, blocked = {}, [0]
 
     def sec(level, msg, key=None):
@@ -44,6 +51,8 @@ def create_app(rt, og, feed=None):
     sec("ok", "control API bound to 127.0.0.1; requests with a foreign Host header are refused")
     sec("ok", "per-run control token issued; only the /app page receives it")
     sec("ok", f"control room and camera need the password; {MAX_FAILS} wrong tries lock login for {LOCKOUT_S} s")
+    sec("ok" if owners else "warn", f"0G wallet login for {len(owners)} owner wallet(s)" if owners
+        else "no OWNER_WALLETS set: wallet login disabled")
     key_ok = re.fullmatch(r"[0-9a-fA-F]{64}", os.environ.get("EPISODE_KEY", "")) is not None
     sec("ok" if key_ok else "warn", "episodes sealed with AES-256-GCM before upload" if key_ok
         else "no valid EPISODE_KEY: episodes will NOT be uploaded (fails closed)")
@@ -54,7 +63,7 @@ def create_app(rt, og, feed=None):
     async def guard(req: Request, call_next):
         # Host check stops DNS rebinding (an evil site resolving to 127.0.0.1 and reading the page + token).
         host = req.headers.get("host") or ""
-        if host.rsplit(":", 1)[0] not in LOCAL:
+        if host.rsplit(":", 1)[0].lower() not in hosts:
             sec("block", f"refused {req.method} {req.url.path}: foreign Host '{host[:60]}' (DNS rebinding?)", "host")
             return JSONResponse({"error": "bad host"}, status_code=403)
         # Any website can POST to localhost; the custom token header forces a CORS preflight it can't pass.
@@ -65,7 +74,7 @@ def create_app(rt, og, feed=None):
         if (req.method == "POST" and path != "/api/estop") or path.startswith("/api/feed"):
             origin = urlparse(req.headers.get("origin") or "http://localhost").hostname
             sent = req.headers.get("x-skitter-token")
-            why = ("foreign origin " + str(origin)[:60] if origin not in LOCAL else None if path == "/api/login"
+            why = ("foreign origin " + str(origin)[:60] if origin not in hosts else None if path in LOGIN
                    else "no token" if not sent else "wrong token" if not secrets.compare_digest(sent, token) else None)
             if why:
                 sec("block", f"refused {req.method} {path}: {why} (CSRF?)", why)
@@ -84,29 +93,77 @@ def create_app(rt, og, feed=None):
             return RedirectResponse(next if next in ("/app", "/recordings") else "/app", status_code=303)
         return FileResponse(WEB / "login.html")
 
-    @app.post("/api/login")
-    async def login(req: Request):
+    def is_locked():
         if time.monotonic() < locked[0]:
-            sec("block", "refused login: locked out after repeated wrong passwords", "locked")
+            sec("block", "refused login: locked out after repeated failed logins", "locked")
             return JSONResponse({"error": "too many tries, wait"}, status_code=429)
-        try:
-            sent = str((await req.json()).get("password", ""))
-        except Exception:
-            return JSONResponse({"error": "bad json"}, status_code=400)
-        if not secrets.compare_digest(sent.encode(), password.encode()):
-            fails[0] += 1
-            sec("block", "refused login: wrong password", "login")
-            if fails[0] >= MAX_FAILS:
-                fails[0], locked[0] = 0, time.monotonic() + LOCKOUT_S
-                sec("block", f"login locked for {LOCKOUT_S} s after {MAX_FAILS} wrong passwords", "lockout")
-            return JSONResponse({"error": "wrong password"}, status_code=401)
+
+    def refuse(why, key):
+        fails[0] += 1
+        sec("block", f"refused login: {why}", "login " + key)
+        if fails[0] >= MAX_FAILS:
+            fails[0], locked[0] = 0, time.monotonic() + LOCKOUT_S
+            sec("block", f"login locked for {LOCKOUT_S} s after {MAX_FAILS} failed logins", "lockout")
+        return JSONResponse({"error": why}, status_code=401)
+
+    def unlock(req, how):
         fails[0] = 0
         sid = secrets.token_urlsafe(32)
         sessions.add(sid)
-        sec("ok", "control room unlocked (new session)")
+        sec("ok", f"control room unlocked by {how} (new session)")
         r = JSONResponse({"ok": True})
-        r.set_cookie(COOKIE, sid, httponly=True, samesite="strict", path="/")
+        r.set_cookie(COOKIE, sid, httponly=True, samesite="strict", path="/", secure=req.url.scheme == "https")
         return r
+
+    async def body(req):
+        try:
+            return await req.json()
+        except Exception:
+            return None
+
+    @app.post("/api/login")
+    async def login(req: Request):
+        if r := is_locked():
+            return r
+        if (b := await body(req)) is None:
+            return JSONResponse({"error": "bad json"}, status_code=400)
+        if not secrets.compare_digest(str(b.get("password", "")).encode(), password.encode()):
+            return refuse("wrong password", "password")
+        return unlock(req, "password")
+
+    @app.get("/api/login/nonce")
+    def wallet_nonce(req: Request):
+        if not owners:
+            return JSONResponse({"error": "wallet login disabled"}, status_code=403)
+        now = time.time()
+        for k in [k for k, (_, t) in nonces.items() if now - t > NONCE_S]:
+            del nonces[k]
+        if len(nonces) >= 100:
+            return JSONResponse({"error": "busy, retry"}, status_code=429)
+        n = secrets.token_hex(16)
+        msg = (f"Sign in to the Skitter control room.\n\nURI: {req.base_url}\nChain ID: {CHAIN_ID}\nNonce: {n}\n"
+               f"Issued At: {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(now))}\n\nNo transaction, no gas.")
+        nonces[n] = (msg, now)
+        return {"message": msg, "chainId": CHAIN_ID}
+
+    @app.post("/api/login/wallet")
+    async def wallet_login(req: Request):
+        if r := is_locked():
+            return r
+        if (b := await body(req)) is None:
+            return JSONResponse({"error": "bad json"}, status_code=400)
+        msg, sig = str(b.get("message", "")), str(b.get("signature", ""))
+        m = re.search(r"^Nonce: ([0-9a-f]{32})$", msg, re.M)
+        issued = nonces.pop(m.group(1), None) if m else None  # single use: a replayed signature finds no nonce
+        if not issued or issued[0] != msg or time.time() - issued[1] > NONCE_S:
+            return refuse("unknown or expired wallet challenge", "challenge")
+        try:
+            addr = Account.recover_message(encode_defunct(text=msg), signature=sig)
+        except Exception:
+            return refuse("bad wallet signature", "signature")
+        if addr.lower() not in owners:
+            return refuse(f"wallet {addr[:10]}… is not an owner", "owner")
+        return unlock(req, f"owner wallet {addr[:10]}…")
 
     @app.post("/api/logout")
     def logout(req: Request):

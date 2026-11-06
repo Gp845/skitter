@@ -12,6 +12,8 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import uvicorn  # noqa: E402
+from eth_account import Account  # noqa: E402
+from eth_account.messages import encode_defunct  # noqa: E402
 
 from cortex.core import episode as ep  # noqa: E402
 from cortex.core.server import COOKIE, MAX_FAILS, create_app  # noqa: E402
@@ -37,6 +39,8 @@ rt = Runtime()
 PORT = 3917
 PASSWORD = "correct horse battery"
 os.environ["SKITTER_PASSWORD"] = PASSWORD
+OWNER, STRANGER = Account.create(), Account.create()
+os.environ["OWNER_WALLETS"] = OWNER.address
 server = uvicorn.Server(uvicorn.Config(create_app(rt, og=None), host="127.0.0.1", port=PORT, log_level="error"))
 threading.Thread(target=server.run, daemon=True).start()
 while not server.started:
@@ -114,13 +118,34 @@ checks["logout"] = req("/api/logout", "POST", **me, **{"X-Skitter-Token": token}
 checks["session dead after logout"] = req("/api/frame", **me)[0] == 401 and req("/app", **me)[0] == 303
 checks["E-STOP after logout"] = req("/api/estop", "POST")[0] == 200 and rt.stops == 2
 
+
+
+def wallet_login(acct, edit=lambda m: m, sig=None):
+    msg = json.loads(req("/api/login/nonce")[1])["message"]
+    sig = sig or acct.sign_message(encode_defunct(text=msg)).signature.hex()
+    body = json.dumps({"message": edit(msg), "signature": sig}).encode()
+    return req("/api/login/wallet", "POST", body, **{"Content-Type": "application/json"}), msg, sig
+
+
+(s, _, h), msg, sig = wallet_login(OWNER)
+checks["owner wallet signature unlocks"] = s == 200 and h.get("Set-Cookie", "").startswith(COOKIE + "=")
+checks["wallet session opens /app"] = req("/app", Cookie=h["Set-Cookie"].split(";")[0])[0] == 200
+replay = json.dumps({"message": msg, "signature": sig}).encode()
+checks["replayed wallet signature"] = req("/api/login/wallet", "POST", replay,
+                                          **{"Content-Type": "application/json"})[0] == 401
+checks["non-owner wallet"] = wallet_login(STRANGER)[0][0] == 401
+checks["owner signature on an edited message"] = wallet_login(
+    OWNER, lambda m: m.replace("Skitter", "Skittr"))[0][0] == 401
+login(PASSWORD)  # a good login resets the fail count the 3 wallet refusals above built up
+
 tries = [login("guess")[0] for _ in range(MAX_FAILS)]
 checks[f"lockout: {MAX_FAILS} wrong, then even the right password is refused"] = (
     tries == [401] * MAX_FAILS and login(PASSWORD)[0] == 429)
 log = [e["msg"] for e in rt.events if e["type"] == "security"]
 checks["every refusal kind, login, lockout + E-STOP in the security log"] = all(
     any(s in m for m in log) for s in ("foreign Host", "no token", "wrong token", "foreign origin", "E-STOP",
-                                       "wrong password", "unlocked", "login locked"))
+                                       "wrong password", "unlocked", "login locked", "not an owner",
+                                       "unlocked by owner wallet"))
 
 # sealing: round trip, tamper detection, wrong key, no key = no upload
 os.environ["EPISODE_KEY"] = "11" * 32

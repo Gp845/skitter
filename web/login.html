@@ -31,6 +31,8 @@
   button:hover{transform:translateY(-2px) rotate(-1deg)}
   button:disabled{opacity:.5;cursor:wait}
   button:focus-visible,input:focus-visible{outline:2px solid var(--red);outline-offset:3px}
+  button.alt{background:transparent;color:var(--cream);border:1.5px solid var(--cream)}
+  .or{font:400 11px var(--mono);color:var(--muted);letter-spacing:.2em;text-transform:uppercase}
   #err{font:400 12px var(--mono);color:var(--red);min-height:18px}
 </style>
 <header>
@@ -44,6 +46,8 @@
     <input id="pw" type="password" autocomplete="current-password" autofocus required>
     <div id="err"></div>
     <button id="go">Unlock</button>
+    <div class="or">or</div>
+    <button type="button" id="wallet" class="alt">Connect 0G wallet</button>
   </form>
 </main>
 <script>
@@ -60,5 +64,26 @@ $('f').onsubmit=async e=>{
     $('pw').select();
   }catch{$('err').textContent='Robot not reachable.'}
   finally{$('go').disabled=false}
+};
+const OG={chainId:'0x40da',chainName:'0G Galileo Testnet',nativeCurrency:{name:'0G',symbol:'0G',decimals:18},
+  rpcUrls:['https://evmrpc-testnet.0g.ai'],blockExplorerUrls:['https://chainscan-galileo.0g.ai']};
+$('wallet').onclick=async()=>{
+  const eth=window.ethereum;$('err').textContent='';
+  if(!eth)return $('err').textContent='No wallet found. Install MetaMask or use the password.';
+  $('wallet').disabled=true;
+  try{
+    const [addr]=await eth.request({method:'eth_requestAccounts'});
+    try{await eth.request({method:'wallet_switchEthereumChain',params:[{chainId:OG.chainId}]})}
+    catch(e){if(e.code===4902)await eth.request({method:'wallet_addEthereumChain',params:[OG]});else throw e}
+    const c=await fetch('/api/login/nonce');
+    if(!c.ok)return $('err').textContent=c.status===403?'Wallet login is not set up on this robot.':'Refused ('+c.status+').';
+    const {message}=await c.json();
+    const signature=await eth.request({method:'personal_sign',params:[message,addr]});
+    const r=await fetch('/api/login/wallet',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message,signature})});
+    if(r.ok)return location.replace(next);
+    $('err').textContent=r.status===429?'Too many failed tries. Wait 30 s.':r.status===401?'This wallet is not an owner of this robot.':'Refused ('+r.status+').';
+  }catch(e){$('err').textContent=e.code===4001?'Cancelled in wallet.':'Wallet error: '+(e.message||e)}
+  finally{$('wallet').disabled=false}
 };
 </script>

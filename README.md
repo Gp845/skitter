@@ -144,7 +144,7 @@ against, and how:
 
 | Threat | Defence | Checked by |
 |---|---|---|
-| Someone on your network or another browser tab opens the control room / camera | Password login (`SKITTER_PASSWORD`); the control room, recordings, camera and every API call need the session cookie (HttpOnly, SameSite=Strict); 5 wrong passwords lock login for 30 s | `test_security.py` |
+| Someone on your network or another browser tab opens the control room / camera | Password or 0G wallet login (`SKITTER_PASSWORD`, `OWNER_WALLETS`); the control room, recordings, camera and every API call need the session cookie (HttpOnly, SameSite=Strict); 5 wrong passwords lock login for 30 s | `test_security.py` |
 | A web page you visit drives the robot (CSRF on the localhost API) | Every command needs a per-run token that only the control room page receives, sent as a custom header (forces a CORS preflight); POSTs from foreign origins are refused | `scripts/test_security.py` |
 | DNS rebinding (an attacker's domain resolves to 127.0.0.1) | Server binds 127.0.0.1 only and refuses any `Host` that is not localhost | `test_security.py` |
 | Camera frames of your home on public storage | Episodes are sealed with AES-256-GCM (`storage/seal.mjs`) before upload; no `EPISODE_KEY` means no upload (fails closed); tampering or a wrong key fails the GCM tag | `test_security.py`, `audit.py` |
@@ -158,7 +158,16 @@ against, and how:
 one, the pages redirect to `/login` and the API answers 401. The password is `SKITTER_PASSWORD` in `.env`; if it is
 empty, a random one is printed at startup. A login sets the `skitter_session` cookie: HttpOnly (page scripts can't
 read it), SameSite=Strict (other sites can't send it). Sessions live in memory, so a restart logs everyone out.
-After 5 wrong passwords, all logins are refused for 30 s. The token checks above still apply on top of the session.
+After 5 failed logins, all logins are refused for 30 s. The token checks above still apply on top of the session.
+
+**0G wallet login.** Owners can sign in with an EVM wallet (MetaMask etc.) instead of the password. The login page
+switches the wallet to 0G Galileo (chain 16602) and asks it to sign a one-time message from the server (no
+transaction, no gas). The server recovers the signer and lets it in only if the address is in `OWNER_WALLETS`. Each
+challenge works once and expires after 5 minutes, so a captured signature can't be replayed. Empty `OWNER_WALLETS`
+turns wallet login off.
+
+**Deploying beyond localhost.** Put the server behind an HTTPS reverse proxy (the session cookie becomes `Secure`
+over HTTPS) and list your domain in `SKITTER_HOSTS`; any other Host or Origin is still refused.
 
 The control room shows a live **Security** log: the security status at startup, every refused request with the
 reason (foreign Host, foreign origin, missing or wrong token, wrong password, lockout), logins, E-STOPs, safe stops, lease expiries and sealed
@@ -218,7 +227,7 @@ python audit.py 0x<rootHash>     # Storage proof + privacy + Chain entry + 0G re
 ```
 
 Tests (no 0G calls, no cost): `python scripts/test_executor.py` (15 safety/behaviour tests),
-`python scripts/test_security.py` (33 login, API lock-down and sealing tests), `python scripts/test_replay.py`,
+`python scripts/test_security.py` (38 login, wallet, API lock-down and sealing tests), `python scripts/test_replay.py`,
 `python scripts/test_skills.py`, `python scripts/test_stairs.py`, `python scripts/test_house.py`,
 `python scripts/test_feed.py` (house patrol while recording; hash chain, frames, person detection; `--upload` also
 seals, uploads and verifies one clip on testnet),
