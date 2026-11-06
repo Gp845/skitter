@@ -1,0 +1,8 @@
+pybullet
+numpy
+opencv-python
+openai
+python-dotenv
+fastapi
+uvicorn
+httpx

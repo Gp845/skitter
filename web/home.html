@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Skitter · six-legged home security</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Space+Grotesk:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--cream:#e8e3d6;--ink:#0b0b0b;--red:#eb1716;--muted:#8a857a;
+        --brush:"Permanent Marker",cursive;--sans:"Space Grotesk",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--ink);color:var(--cream);overflow:hidden;font:15px/1.5 var(--sans)}
+  body:after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.12;mix-blend-mode:overlay;
+    background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+  #gl{position:fixed;inset:0;display:block;cursor:grab}
+  #gl:active{cursor:grabbing}
+  .brand{position:fixed;left:40px;top:28px;pointer-events:none}
+  h1{font:400 clamp(64px,10vw,140px)/.85 var(--brush);margin:0;letter-spacing:-.02em}
+  h1 b{color:var(--red);font-weight:400}
+  .brand p{margin:14px 0 0;max-width:360px;color:var(--muted);font-size:15px}
+  .cta{position:fixed;right:40px;top:36px;background:var(--red);color:var(--cream);text-decoration:none;
+    font:400 20px var(--brush);padding:12px 22px;clip-path:polygon(0 6%,4% 0,97% 4%,100% 50%,98% 96%,3% 100%,1% 60%)}
+  .cta:hover{background:var(--cream);color:var(--ink)}
+  .hud{position:fixed;left:40px;bottom:30px;font:500 12px var(--mono);letter-spacing:.18em;color:var(--muted)}
+  .hud b{color:var(--red);font-weight:500}
+  .hud ol{list-style:none;margin:8px 0 0;padding:0;display:flex;gap:14px;flex-wrap:wrap;max-width:520px}
+  .hud li{opacity:.25;transition:opacity .6s,color .6s;cursor:pointer}
+  .hud li.lit{opacity:1;color:var(--cream)}
+  .hint{position:fixed;right:40px;bottom:30px;font:500 12px var(--mono);letter-spacing:.18em;color:var(--muted)}
+  #panel{position:fixed;right:40px;top:50%;width:340px;transform:translate(30px,-50%);opacity:0;pointer-events:none;
+    background:var(--cream);color:var(--ink);padding:26px 26px 22px;transition:opacity .5s,transform .5s;
+    clip-path:polygon(0 2%,8% 0,30% 2%,55% 0,80% 2%,100% 0,99% 40%,100% 98%,70% 100%,40% 98%,12% 100%,0 98%,1% 50%)}
+  #panel.on{opacity:1;transform:translate(0,-50%);pointer-events:auto}
+  #panel .n{font:500 12px var(--mono);letter-spacing:.18em;color:var(--red)}
+  #panel h2{font:400 44px/1 var(--brush);margin:6px 0 12px}
+  #panel p{margin:0 0 10px;font-size:15px}
+  #panel small{display:block;color:#5a564d;font:400 12px/1.5 var(--mono)}
+  #load{position:fixed;inset:0;display:grid;place-items:center;font:500 13px var(--mono);letter-spacing:.2em;color:var(--muted);pointer-events:none;transition:opacity .8s}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+  "three/examples/jsm/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+  "urdf-loader":"https://cdn.jsdelivr.net/npm/urdf-loader@0.13.1/src/URDFLoader.js"
+}}
+</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div class="brand">
+  <h1>Skit<b>ter</b></h1>
+  <p>A six-legged home security robot. It patrols, records, and seals every frame on 0G, so nobody can quietly edit the tape. Follow it around the dark: every place it reaches lights up.</p>
+</div>
+<a class="cta" href="/app">Open control room →</a>
+<div class="hud">PLACES LIT <b id="count">0</b> / <span id="total">0</span><ol id="list"></ol></div>
+<div class="hint">DRAG TO LOOK · CLICK A LIT PLACE</div>
+<aside id="panel"><div class="n" id="pn"></div><h2 id="pt"></h2><p id="pb"></p><small id="pd"></small></aside>
+<div id="load">WAKING SKITTER… <span id="pct">0</span>%</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import URDFLoader from 'urdf-loader';
+
+const PLACES = [
+  {k:'Patrol',   t:'It walks its round of your home on its own, recording all the way. No model calls.',
+   d:'Waypoints per home, odometry turns and walks, the depth camera stops it short of obstacles. E-STOP or any command ends the round.'},
+  {k:'Record',   t:'The camera is recorded at 2 fps into one-minute clips, encrypted before they leave the house.',
+   d:'AES-256-GCM with your key. Each clip goes to 0G Storage and its root is registered on 0G Chain.'},
+  {k:'Chain',    t:'Every clip carries the hash of the one before. Delete, swap or edit a clip and the chain breaks.',
+   d:'Playback downloads the clip and checks the Merkle proof, the chain entry, the GCM tag, every frame hash and both links.'},
+  {k:'Spot',     t:'Someone walks in: it flags the frame, and 0G describes who it saw in one line.',
+   d:'The person detector runs on the robot for free. The 0G vision call is rate-limited to one a minute and written into the clip.'},
+  {k:'Talk',     t:'"What do you see?", "follow me", "check the kitchen". Every move is a 0G call with a request ID.',
+   d:'Browser speech or 0G speech-to-text, then a 0G vision model picks one tool call. No call, no move.'},
+  {k:'Climb',    t:'Narrow stairs: it tucks its legs in. Shallow treads: it turns side-on and crabs up.',
+   d:'The depth camera measures the riser and squares up to it. Wrong height, too steep or tilting past 20 degrees: it refuses or stops.'},
+  {k:'Stop',     t:'0G down, plan stale, lease expired: it stops. It never guesses.',
+   d:'Leases plus a watchdog. Any failed call becomes SAFE_STOP. Text it sees on a sign is scene, never an order.'},
+  {k:'Lock',     t:'Only its own control room can command it or watch the footage. E-STOP is never locked.',
+   d:'Per-run token, Host and Origin checks against CSRF and DNS rebinding, and a live security log of every refused request.'},
+  {k:'Prove',    t:'Anyone can check a recording exists, is intact and was registered. Only you can watch it.',
+   d:'audit.py checks the storage proof and the chain entry from the root hash alone; with your key it also replays the run exactly.'},
+];
+const N = PLACES.length, R_PLACE = 2.4, R_PATH = 1.45;
+
+// ---------- gait (ported from cortex/adapters/hexapod_pybullet/gait.py) ----------
+const LEGS = [["Revolute 7","Revolute 22","Revolute 49",0,"Revolute 38"],["Revolute 8","Revolute 21","Revolute 48",-60,"Revolute 39"],
+  ["Revolute 9","Revolute 20","Revolute 47",-120,"Revolute 40"],["Revolute 10","Revolute 19","Revolute 46",180,"Revolute 41"],
+  ["Revolute 11","Revolute 24","Revolute 45",120,"Revolute 42"],["Revolute 12","Revolute 23","Revolute 44",60,"Revolute 43"]];
+const PHASE = [0,.5,0,.5,0,.5], L1=.040, L2=.087, L3=.0944, A=52.2*Math.PI/180, B=76.3*Math.PI/180;
+const BODY_H=.07, REACH=.15, LIFT=.05, STEP=.08, CYCLE=.45, HIP_R=.109;   // CYCLE in seconds; longer/faster than the sim so the page doesn't crawl
+function ik(x,y,z){
+  const t1=Math.atan2(y,x), r=Math.hypot(x,y)-L1;
+  const c3=Math.max(-1,Math.min(1,(r*r+z*z-L2*L2-L3*L3)/(2*L2*L3)));
+  const t3=Math.atan2(Math.sqrt(1-c3*c3),c3), k1=L2+L3*Math.cos(t3), k2=L3*Math.sin(t3);
+  const t2=Math.atan2(-k2*r-k1*z,k1*r-k2*z);
+  return [t1, Math.PI/2+t2-A, t3-Math.PI/2+A-B];
+}
+function foot(phase,sx,sy,amp,nx=REACH,ny=0){
+  let k,lift=0;
+  if(phase<.5){const s=phase/.5;k=s-.5;lift=LIFT*amp*Math.sin(Math.PI*s);} else {k=.5-(phase-.5)/.5;}
+  return [nx+k*sx,ny+k*sy,-BODY_H+lift];
+}
+function narrow(mount,half){  // gait.narrow_neutral: side legs swing fore/aft so feet stay within |y| <= half
+  const a=mount*Math.PI/180,hx=HIP_R*Math.cos(a),hy=-HIP_R*Math.sin(a),wy=hy-REACH*Math.sin(a);
+  if(Math.abs(wy)<=half)return [REACH,0];
+  const fy=Math.sign(wy)*half,fx=hx+Math.sign(hx)*Math.sqrt(Math.max(0,REACH*REACH-(fy-hy)**2)),dx=fx-hx,dy=fy-hy;
+  return [dx*Math.cos(a)-dy*Math.sin(a),dx*Math.sin(a)+dy*Math.cos(a)];
+}
+function footWorld(b,a,fx,fy){  // leg-frame foot -> world (x, z), same frames as gait.py; URDF y is three.js -z
+  const bx=(HIP_R+fx)*Math.cos(a)+fy*Math.sin(a),by=-(HIP_R+fx)*Math.sin(a)+fy*Math.cos(a),lz=-by;
+  return [b.x+bx*Math.cos(b.yaw)+lz*Math.sin(b.yaw),b.z-bx*Math.sin(b.yaw)+lz*Math.cos(b.yaw)];
+}
+// Each foot stands on the ground under it; a swinging foot aims for its landing height (like StairGait).
+// crab in [0,1]: walk toward the body's left with the legs tucked (how Skitter climbs shallow treads).
+// Returns the mean foot ground height so the body can ride on it.
+function pose(robot,t,vx,wz,ground=()=>0,b={x:0,z:0,yaw:0,gz:0},crab=0){
+  const amp=Math.min(1,(Math.abs(vx)+Math.abs(wz))*4);let sum=0;
+  LEGS.forEach(([c,f,ti,mount,ta],i)=>{
+    const a=mount*Math.PI/180,d=a+crab*Math.PI/2;let sx=vx*Math.cos(d),sy=vx*Math.sin(d)+wz;const n=Math.hypot(sx,sy);
+    if(n>1){sx/=n;sy/=n;}
+    const [qx,qy]=narrow(mount,.10),nx=REACH+(qx-REACH)*crab,ny=qy*crab;
+    const ph=((t/CYCLE+PHASE[i])%1+1)%1,[x,y,z]=foot(ph,sx*STEP,sy*STEP,amp,nx,ny);
+    let g=ground(...footWorld(b,a,x,y));
+    if(ph<.5)g=Math.max(g,ground(...footWorld(b,a,nx+.5*sx*STEP,ny+.5*sy*STEP)));
+    sum+=g;
+    const [a1,a2,a3]=ik(x,y,z+g-b.gz);
+    robot.setJointValue(c,a1);robot.setJointValue(f,a2);robot.setJointValue(ti,a3);robot.setJointValue(ta,0);
+  });
+  return sum/6;
+}
+
+// ---------- scene ----------
+const canvas=document.getElementById('gl');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(2,devicePixelRatio));
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0b0b0b);
+scene.fog=new THREE.FogExp2(0x0b0b0b,.17);
+const camera=new THREE.PerspectiveCamera(45,1,.02,60);
+camera.position.set(0,1.4,1.6);
+const controls=new OrbitControls(camera,canvas);
+controls.enableDamping=true;controls.enablePan=false;controls.minDistance=.6;controls.maxDistance=7;controls.maxPolarAngle=1.45;
+let userT=-1e9;controls.addEventListener('start',()=>userT=performance.now());
+
+scene.add(new THREE.HemisphereLight(0x5a554c,0x0a0a0a,1.4));
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(40,40),new THREE.MeshStandardMaterial({color:0x1b1a17,roughness:.95}));
+ground.rotation.x=-Math.PI/2;scene.add(ground);
+const grid=new THREE.GridHelper(40,160,0x2a2824,0x1f1e1b);grid.position.y=.001;scene.add(grid);
+
+function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}
+addEventListener('resize',resize);resize();
+
+// ---------- places ----------
+function wrap(g,text,x,y,w,lh){let line='';for(const word of text.split(' ')){const tryL=line?line+' '+word:word;
+  if(g.measureText(tryL).width>w&&line){g.fillText(line,x,y);y+=lh;line=word;}else line=tryL;}g.fillText(line,x,y);}
+function cardTexture(i,p){
+  const c=document.createElement('canvas');c.width=1024;c.height=640;const g=c.getContext('2d');
+  g.fillStyle='#e8e3d6';g.beginPath();g.moveTo(0,18);
+  for(let x=0;x<=1024;x+=32)g.lineTo(x,6+Math.random()*22);
+  for(let y=0;y<=640;y+=40)g.lineTo(1024-Math.random()*10,y);
+  for(let x=1024;x>=0;x-=32)g.lineTo(x,640-6-Math.random()*22);
+  for(let y=640;y>=0;y-=40)g.lineTo(Math.random()*10,y);
+  g.closePath();g.fill();
+  g.fillStyle='#eb1716';g.font='500 32px "JetBrains Mono"';g.fillText(`${String(i+1).padStart(2,'0')} / ${String(N).padStart(2,'0')}`,64,104);
+  g.fillStyle='#0b0b0b';g.font='150px "Permanent Marker"';g.fillText(p.k,58,280);
+  g.fillStyle='#eb1716';g.fillRect(64,310,g.measureText(p.k).width*.6,8);
+  g.fillStyle='#0b0b0b';g.font='38px "Space Grotesk"';wrap(g,p.t,64,390,880,52);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t;
+}
+const places=[];
+const plinthMat=new THREE.MeshStandardMaterial({color:0x2a2824,roughness:.8});
+function buildPlaces(){
+  PLACES.forEach((p,i)=>{
+    const a=-Math.PI/2+i*2*Math.PI/N, grp=new THREE.Group();
+    grp.position.set(R_PLACE*Math.cos(a),0,R_PLACE*Math.sin(a));grp.lookAt(0,0,0);scene.add(grp);
+    const tex=cardTexture(i,p);
+    const mat=new THREE.MeshStandardMaterial({map:tex,color:0x2c2a26,emissive:0xffffff,emissiveMap:tex,emissiveIntensity:0,roughness:.85});
+    const card=new THREE.Mesh(new THREE.PlaneGeometry(1.0,.625),mat);card.position.y=.62;grp.add(card);
+    const back=new THREE.Mesh(new THREE.BoxGeometry(1.04,.665,.02),plinthMat);back.position.set(0,.62,-.012);grp.add(back);
+    const post=new THREE.Mesh(new THREE.BoxGeometry(.04,.3,.04),plinthMat);post.position.set(0,.15,-.02);grp.add(post);
+    const barMat=new THREE.MeshStandardMaterial({color:0x220404,emissive:0xeb1716,emissiveIntensity:0});
+    const bar=new THREE.Mesh(new THREE.BoxGeometry(1.0,.02,.02),barMat);bar.position.set(0,.95,.02);grp.add(bar);
+    const lamp=new THREE.PointLight(0xffdcb4,0,3,1.6);lamp.position.set(0,1.1,.7);grp.add(lamp);
+    grp.userData.i=i;
+    places.push({p,i,a,grp,card,mat,barMat,lamp,glow:0,lit:false,
+      path:new THREE.Vector3(R_PATH*Math.cos(a),0,R_PATH*Math.sin(a))});
+    const li=document.createElement('li');li.textContent=p.k.toUpperCase();li.onclick=()=>show(i);
+    document.getElementById('list').appendChild(li);places[i].li=li;
+  });
+  document.getElementById('total').textContent=N;
+}
+const panel=document.getElementById('panel');let panelT=0;
+function show(i){
+  const s=places[i];panel.classList.add('on');panelT=performance.now();
+  document.getElementById('pn').textContent=`${String(i+1).padStart(2,'0')} / ${String(N).padStart(2,'0')}`;
+  document.getElementById('pt').textContent=s.lit?s.p.k:'Still dark';
+  document.getElementById('pb').textContent=s.lit?s.p.t:'Skitter has not been here yet. It is on its way.';
+  document.getElementById('pd').textContent=s.lit?s.p.d:'';
+}
+function light(s){
+  if(s.lit)return;s.lit=true;s.li.classList.add('lit');show(s.i);
+  document.getElementById('count').textContent=places.filter(x=>x.lit).length;
+}
+const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();let downXY=null;
+function pick(e){  // place under the pointer: any part of it, or the floor within 1 m of it
+  mouse.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(mouse,camera);
+  const hit=ray.intersectObjects([...places.map(s=>s.grp),ground],true)[0];
+  if(!hit)return null;
+  for(let o=hit.object;o;o=o.parent)if(o.userData.i!==undefined)return places[o.userData.i];
+  let best=null,bd=1;
+  for(const s of places){const d=s.grp.position.distanceTo(hit.point.setY(0));if(d<bd){bd=d;best=s;}}
+  return best;
+}
+canvas.addEventListener('pointerdown',e=>downXY=[e.clientX,e.clientY]);
+canvas.addEventListener('pointermove',e=>{if(e.buttons)return;const s=pick(e);canvas.style.cursor=s?'pointer':'';});
+canvas.addEventListener('click',e=>{
+  if(!downXY||Math.hypot(e.clientX-downXY[0],e.clientY-downXY[1])>5)return;
+  const s=pick(e);if(s)show(s.i);else panel.classList.remove('on');
+});
+
+// ---------- props (kept off the walking loop: it runs between r=1.34 and r=1.45) ----------
+const M=(color,o={})=>new THREE.MeshStandardMaterial({color,roughness:.8,...o});
+const MAT={wood:M(0x6b5136),crate:M(0xa8875a),concrete:M(0x55524b,{roughness:.95}),fabric:M(0x3d3a52),
+  red:M(0xb3201c),blue:M(0x2f4f86),green:M(0x4d6b3c),cream:M(0xd6cfbf),yellow:M(0xd9b21e),purple:M(0x5a2a80),skin:M(0xc99a78),rug:M(0x5e1d1a,{roughness:1})};
+function box(w,h,d,x,y,z,mat,parent=scene,ry=0){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y+h/2,z);m.rotation.y=ry;parent.add(m);return m;
+}
+function at(r,a){const g=new THREE.Group();g.position.set(r*Math.cos(a),0,r*Math.sin(a));g.lookAt(0,0,0);scene.add(g);return g;}
+function buildProps(){
+  const gap=i=>-Math.PI/2+(i+.5)*2*Math.PI/N;
+  // stairs on the walking loop, between Follow and Climb, like the sim's: 6 cm risers, 26 cm treads, up and down
+  const p0=places[4].path,p1=places[5].path;
+  stair.th=Math.atan2(-(p1.z-p0.z),p1.x-p0.x);stair.x=(p0.x+p1.x)/2;stair.z=(p0.z+p1.z)/2;
+  const sg=new THREE.Group();sg.position.set(stair.x,0,stair.z);sg.rotation.y=stair.th;scene.add(sg);
+  box(.82,.06,.7,0,0,0,MAT.concrete,sg);box(.3,.06,.7,0,.06,0,MAT.concrete,sg);
+  // centre: rug only (the camera sits above it)
+  const rug=new THREE.Mesh(new THREE.CircleGeometry(.85,48),MAT.rug);rug.rotation.x=-Math.PI/2;rug.position.y=.003;scene.add(rug);
+  // big staircase climbing away from the loop
+  const st=at(3.3,gap(0));
+  for(let s=0;s<5;s++)box(1.1,.12*(s+1),.3,0,0,-s*.3,MAT.concrete,st);
+  box(1.1,.6,.8,0,0,-1.9,MAT.concrete,st);
+  [-.57,.57].forEach(x=>{box(.03,.9,.03,x,0,-.6,MAT.cream,st);box(.03,.03,1.55,x,.9,-.6,MAT.cream,st).rotation.x=-.38;});
+  // crate stack
+  const cs=at(3.2,gap(2));
+  box(.5,.5,.5,-.3,0,0,MAT.crate,cs,.1);box(.5,.5,.5,.3,0,-.05,MAT.crate,cs,-.15);box(.45,.45,.45,0,.5,0,MAT.crate,cs,.3);
+  box(.3,.3,.3,.75,0,.35,MAT.crate,cs,.6);
+  // wall with a doorway
+  const wl=at(3.6,gap(4));
+  box(1.0,1.6,.12,-1.0,0,0,MAT.cream,wl);box(1.0,1.6,.12,1.0,0,0,MAT.cream,wl);box(1.0,.4,.12,0,1.2,0,MAT.cream,wl);
+  box(.2,.2,.02,-1.0,.9,.07,MAT.red,wl);
+  // couch, floor lamp, and the user (yellow shirt, purple trousers)
+  const lv=at(3.3,gap(6));
+  box(1.4,.25,.6,0,0,0,MAT.fabric,lv);box(1.4,.4,.15,0,.25,-.25,MAT.fabric,lv);
+  box(.15,.2,.6,-.7,.25,0,MAT.fabric,lv);box(.15,.2,.6,.7,.25,0,MAT.fabric,lv);
+  const pole=new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,1.4,8),MAT.cream);pole.position.set(1.05,.7,-.1);lv.add(pole);
+  const shade=new THREE.Mesh(new THREE.CylinderGeometry(.1,.16,.18,24,1,true),M(0xe8e3d6,{emissive:0xffc98a,emissiveIntensity:.6,side:THREE.DoubleSide}));
+  shade.position.set(1.05,1.45,-.1);lv.add(shade);
+  const warm=new THREE.PointLight(0xffc98a,1.8,3.5,1.6);warm.position.set(1.05,1.35,-.1);lv.add(warm);
+  const me=new THREE.Group();me.position.set(-1.25,0,.35);me.rotation.y=.5;lv.add(me);
+  [-.07,.07].forEach(x=>box(.09,.75,.11,x,0,0,MAT.purple,me));
+  box(.32,.5,.18,0,.75,0,MAT.yellow,me);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.1,24,16),MAT.skin);head.position.y=1.38;me.add(head);
+  // the sim's coloured target boxes, scattered in the gaps between places
+  [[1,MAT.red,.18],[3,MAT.blue,.14],[5,MAT.green,.2],[7,MAT.red,.12],[7,MAT.blue,.1]].forEach(([g,mat,s],j)=>
+    box(s,s,s,(j===4?.25:0),0,0,mat,at(1.95+(j===4?.1:0),gap(g)),j*.7));
+  // dust drifting in the light
+  const n=500,pos=new Float32Array(n*3);
+  for(let i=0;i<n;i++){const r=4.5*Math.sqrt(Math.random()),a=Math.random()*6.283;pos.set([r*Math.cos(a),Math.random()*1.6,r*Math.sin(a)],i*3);}
+  const dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  dust=new THREE.Points(dg,new THREE.PointsMaterial({color:0xfff0d8,size:.008,transparent:true,opacity:.5,depthWrite:false}));
+  scene.add(dust);
+}
+let dust=null;
+const stair={th:0,x:1e9,z:0};
+function stairLocal(x,z){  // (along the loop, across it) from the stair centre
+  const dx=x-stair.x,dz=z-stair.z,c=Math.cos(stair.th),s=Math.sin(stair.th);
+  return [Math.abs(dx*c-dz*s),Math.abs(dx*s+dz*c)];
+}
+function stairGround(x,z){  // height of the stair top under world (x, z)
+  const [lx,lz]=stairLocal(x,z);
+  return lz>.35?0:lx<.15?.12:lx<.41?.06:0;
+}
+console.assert(stairGround(1e9,0)===.12&&stairGround(1e9+.3,0)===.06&&stairGround(1e9+.5,0)===0&&stairGround(1e9,.4)===0,'stairGround');
+
+// ---------- robot ----------
+const rig=new THREE.Group();scene.add(rig);
+let robot=null;
+const START=-Math.PI/2-2*Math.PI/N;  // on the loop, one place before the first
+const bot={x:R_PATH*Math.cos(START),z:R_PATH*Math.sin(START),yaw:Math.PI/2,gz:0,crab:0,vx:0,wz:0,t:0,target:0,mode:'walk',wait:0};
+const manager=new THREE.LoadingManager();
+manager.onProgress=(_u,done,total)=>document.getElementById('pct').textContent=Math.round(100*done/Math.max(total,1));
+manager.onLoad=()=>{if(robot)wake();};
+manager.onError=u=>document.getElementById('load').textContent='Could not load '+u;
+const loader=new URDFLoader(manager);
+loader.packages={assembly_05_description:'/pkg/assembly_05_description'};
+loader.load('/pkg/assembly_05_description/urdf/assembly_05.urdf',r=>{robot=r;});
+
+function wake(){
+  const bodyMat=new THREE.MeshStandardMaterial({color:0xd9d3c5,metalness:.55,roughness:.35});
+  robot.traverse(o=>{if(o.isMesh)o.material=bodyMat;});
+  robot.rotation.x=-Math.PI/2;rig.add(robot);
+  pose(robot,0,0,0);rig.updateMatrixWorld(true);
+  const box=new THREE.Box3().setFromObject(robot);robot.position.y=-box.min.y;
+  const front=box.max.x,top=box.max.y-box.min.y;
+  const eye=new THREE.Mesh(new THREE.SphereGeometry(.012,16,8),new THREE.MeshBasicMaterial({color:0xeb1716}));
+  eye.position.set(front*.9,top*.45,0);rig.add(eye);
+  const spot=new THREE.SpotLight(0xfff0d8,14,4.5,Math.PI/6.5,.45,1.4);
+  spot.position.set(front*.6,.3,0);spot.target.position.set(front+1.4,0,0);rig.add(spot,spot.target);
+  const H=1.4,beamGeo=new THREE.ConeGeometry(Math.tan(Math.PI/6.5)*H,H,32,1,true);
+  beamGeo.translate(0,-H/2,0);beamGeo.rotateX(-Math.PI/2);
+  const beam=new THREE.Mesh(beamGeo,new THREE.MeshBasicMaterial({color:0xfff0d8,transparent:true,opacity:.045,
+    blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
+  const rim=new THREE.PointLight(0xffe6c8,.6,1.2,1.5);rim.position.set(-.1,.35,.15);rig.add(rim);
+  beam.position.copy(spot.position);rig.add(beam);rig.updateMatrixWorld(true);
+  beam.lookAt(spot.target.getWorldPosition(new THREE.Vector3()));
+  const ff=+new URLSearchParams(location.search).get('ff')||0;  // ?ff=60 skips ahead 60 s (screenshots)
+  for(let i=0;i<ff*30;i++)drive(1/30);
+  aim();camera.position.copy(camGoal);controls.target.copy(lookGoal);
+  const load=document.getElementById('load');load.style.opacity=0;setTimeout(()=>load.remove(),900);
+}
+
+// ---------- loop ----------
+const wrapA=a=>Math.atan2(Math.sin(a),Math.cos(a));
+const camGoal=new THREE.Vector3(),lookGoal=new THREE.Vector3();
+function drive(dt){
+  const s=places[bot.target];
+  let vx=0,wz=0;
+  if(bot.mode==='walk'){
+    const dx=s.path.x-bot.x,dz=s.path.z-bot.z,dist=Math.hypot(dx,dz);
+    const err=wrapA(Math.atan2(-dz,dx)-bot.yaw);
+    wz=Math.max(-1,Math.min(1,err*2.5));vx=(Math.abs(err)<.5?1:.15)*Math.min(1,dist/.25);
+    if(dist<.05){bot.mode='look';bot.wait=2;}
+  }else{
+    const err=wrapA(Math.atan2(-(s.grp.position.z-bot.z),s.grp.position.x-bot.x)-bot.yaw);
+    wz=Math.max(-1,Math.min(1,err*2.5));
+    if(Math.abs(err)<.15)light(s);
+    if((bot.wait-=dt)<0){bot.mode='walk';bot.target=(bot.target+1)%N;}
+  }
+  const k=1-Math.exp(-dt*3);bot.vx+=k*(vx-bot.vx);bot.wz+=k*(wz-bot.wz);
+  // near the stairs: turn side-on (body 90 deg right of travel) and crab, like the sim on shallow treads
+  const [sx,sz]=stairLocal(bot.x,bot.z),near=sx<.55&&sz<.35&&bot.mode==='walk'?1:0;
+  bot.crab+=(near-bot.crab)*Math.min(1,dt*4);
+  const v=bot.vx*STEP/(.5*CYCLE)*(1-.6*Math.abs(near-bot.crab)),w=bot.wz*1.1;  // slow while turning side-on
+  bot.yaw+=w*dt;bot.x+=Math.cos(bot.yaw)*v*dt;bot.z-=Math.sin(bot.yaw)*v*dt;bot.t+=dt;
+  const body={x:bot.x,z:bot.z,yaw:bot.yaw-bot.crab*Math.PI/2,gz:bot.gz};
+  const gm=pose(robot,bot.t,bot.vx,bot.wz,stairGround,body,bot.crab);
+  bot.gz+=(gm-bot.gz)*Math.min(1,dt*5);
+  rig.position.set(bot.x,bot.gz,bot.z);rig.rotation.y=body.yaw;
+}
+function aim(){
+  const u=new THREE.Vector3(bot.x,0,bot.z);const r=u.length();u.normalize();
+  if(r<.1)u.set(Math.cos(bot.yaw),0,-Math.sin(bot.yaw));
+  const side=new THREE.Vector3(-u.z,0,u.x);
+  camGoal.copy(u).multiplyScalar(r-1.5).addScaledVector(side,.55).setY(.95);
+  lookGoal.copy(u).multiplyScalar(r+.45).setY(.3);
+}
+const clock=new THREE.Clock();
+function frame(){
+  const dt=Math.min(.05,clock.getDelta());
+  if(robot&&robot.parent)drive(dt);
+  if(dust){dust.rotation.y+=dt*.01;dust.position.y=.05*Math.sin(clock.elapsedTime*.3);}
+  for(const s of places){
+    s.glow+=((s.lit?1:0)-s.glow)*Math.min(1,dt*1.5);
+    s.mat.emissiveIntensity=.85*s.glow;s.mat.color.setScalar(.17+.83*s.glow);
+    s.barMat.emissiveIntensity=3*s.glow;s.lamp.intensity=2.2*s.glow;
+  }
+  if(performance.now()-userT>4000&&robot){
+    aim();const k=1-Math.exp(-dt*.8);camera.position.lerp(camGoal,k);controls.target.lerp(lookGoal,k);
+  }
+  if(panel.classList.contains('on')&&performance.now()-panelT>9000)panel.classList.remove('on');
+  controls.update();renderer.render(scene,camera);requestAnimationFrame(frame);
+}
+Promise.race([Promise.all(['150px "Permanent Marker"','38px "Space Grotesk"','500 32px "JetBrains Mono"'].map(f=>document.fonts.load(f))),
+  new Promise(r=>setTimeout(r,3000))]).then(()=>{buildPlaces();buildProps();frame();});
+</script>
+</body>
+</html>
