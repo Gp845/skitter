@@ -1,6 +1,7 @@
 """Owns the robot/sim thread. All adapter calls (stepping, camera) happen on this one thread."""
 import math
 import queue
+import re
 import threading
 import time
 from collections import deque
@@ -18,6 +19,7 @@ class Runtime:
         self.lock = threading.Lock()
         self.frame = adapter.get_frame()
         self.pose, self.person_px = {}, 0
+        self.on_patrol = lambda: None  # the server hooks recording in: a patrol is always recorded
         self._last_frame = 0.0
         self.q = queue.Queue()
         self.busy = False
@@ -57,20 +59,27 @@ class Runtime:
         if self.busy:
             self.ex.estop()
         self.q.put(PATROL)
+        self.on_patrol()
 
     def _wait(self, timeout_s):
-        """Step the sim until the current skill finishes; False if e-stopped, fallen or timed out."""
-        last, end = time.monotonic(), time.monotonic() + timeout_s
+        """Step the sim until the current skill finishes: "done", "timeout" (sim time), or why the patrol must end."""
+        last, end = time.monotonic(), self.adapter.t + timeout_s * 240  # sim steps: the sim runs slower than real time
         while self.adapter.busy():
             now = time.monotonic()
             self.adapter.step(min(now - last, 0.1))
             last = now
             self._refresh_frame()
-            if self.ex._estop.is_set() or self.adapter.state().get("fallen") or now > end:
+            if self.ex._estop.is_set():
                 self.adapter.stop()
-                return False
+                return "stopped by E-STOP or a new command"
+            if self.adapter.state().get("fallen"):
+                self.adapter.stop()
+                return "robot fell"
+            if self.adapter.t > end:
+                self.adapter.stop()
+                return "timeout"
             time.sleep(0.005)
-        return True
+        return "done"
 
     def _patrol(self):
         route = list(getattr(self.adapter, "patrol_route", []))
@@ -80,8 +89,11 @@ class Runtime:
         self.ex._estop.clear()
         self.ex.state = "PATROL"
         self.emit({"t": time.time(), "type": "patrol", "msg": f"patrol started: {len(route)} waypoints, looping"})
-        i, ok = 0, True
-        while ok:
+        i, why = 0, "done"
+        while why in ("done", "timeout"):
+            if self.ex._estop.is_set():
+                why = "stopped by E-STOP or a new command"
+                break
             wx, wy = route[i % len(route)]
             st = self.adapter.state()
             dx, dy = wx - st["x"], wy - st["y"]
@@ -91,18 +103,22 @@ class Runtime:
             elif abs(err) > 8:
                 self.adapter.execute("turn", {"direction": "left" if err > 0 else "right",
                                               "degrees": min(max(abs(err), 10), 180)}, 30)
-                ok = self._wait(30)
+                why = self._wait(30)
             else:
                 self.adapter.execute("walk", {"direction": "forward", "distance_cm": min(math.hypot(dx, dy) * 100, 150)}, 30)
-                ok = self._wait(30)
-                if ok and self.adapter.result() == "blocked":
-                    self.emit({"t": time.time(), "type": "patrol", "msg": f"path to waypoint {i % len(route) + 1} blocked; skipping it"})
-                    i += 1
+                why = self._wait(30)
+                if why == "done" and self.adapter.result() == "blocked":
+                    why = "blocked"
+            if why in ("blocked", "timeout"):  # skip this waypoint, keep patrolling
+                self.emit({"t": time.time(), "type": "patrol", "msg": f"waypoint {i % len(route) + 1}: {why}; skipping it"})
+                i, why = i + 1, "done"
         self.ex.state = "IDLE"
-        self.emit({"t": time.time(), "type": "patrol", "msg": "patrol stopped"})
+        self.emit({"t": time.time(), "type": "patrol", "msg": f"patrol stopped: {why}"})
 
     def submit(self, text):
         """New command interrupts the current task (the old one stops, then this one runs)."""
+        if re.search(r"\bpatrol\b", text, re.I) and not re.search(r"\b(stop|end|cancel)\b", text, re.I):
+            return self.patrol()  # a fixed round: no model needed
         if self.busy:
             self.ex.estop()
         self.q.put(text)

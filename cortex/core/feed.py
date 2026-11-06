@@ -5,6 +5,7 @@ one after a quiet spell also gets a one-line 0G description, rate-limited to pro
 import base64
 import hashlib
 import json
+import os
 import pathlib
 import queue
 import tempfile
@@ -31,7 +32,7 @@ class Feed:
         self.dir = pathlib.Path(folder)
         self.dir.mkdir(parents=True, exist_ok=True)
         self.index = self.dir / "index.json"
-        self.clips = json.loads(self.index.read_text()) if self.index.exists() else []
+        self.clips = self._load()
         self.prev_sha = self.clips[-1]["sha256"] if self.clips else None
         self.seq = self.clips[-1]["seq"] + 1 if self.clips else 0
         self.on, self.lock = False, threading.Lock()
@@ -47,9 +48,25 @@ class Feed:
     def _emit(self, type_, **kw):
         self.rt.emit({"t": time.time(), "type": type_, **kw})
 
+    def _load(self):
+        try:
+            return json.loads(self.index.read_text()) if self.index.exists() else []
+        except ValueError:  # unreadable index: rebuild from the clips themselves (roots are lost; not re-uploaded)
+            clips = []
+            for f in sorted(self.dir.glob("clip-*.zip")):
+                with zipfile.ZipFile(f) as z:
+                    m = json.loads(z.read("clip.json"))
+                clips.append({"seq": m["seq"], "file": f.name, "start": m["start"], "end": m["end"],
+                              "frames": len(m["frames"]), "detections": sum("person_px" in a for a in m["alerts"]),
+                              "sha256": hashlib.sha256(f.read_bytes()).hexdigest(), "prev_sha256": m["prev_sha256"],
+                              "status": "local (index rebuilt)"})
+            return clips
+
     def _save(self):
         with self.lock:
-            self.index.write_text(json.dumps(self.clips, indent=1))
+            tmp = self.index.with_suffix(".tmp")
+            tmp.write_text(json.dumps(self.clips, indent=1))
+            os.replace(tmp, self.index)  # atomic: a crash mid-save never leaves a half-written index
 
     def start(self):
         if not self.on:

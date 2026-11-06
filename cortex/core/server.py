@@ -149,11 +149,12 @@ def create_app(rt, og, feed=None):
             return JSONResponse({"error": "bad root"}, status_code=400)
         return feed.verify(root)
 
+    if feed:
+        rt.on_patrol = feed.start  # a security round is always recorded, however it was started
+
     @app.post("/api/patrol")
     def patrol():
         rt.patrol()
-        if feed:
-            feed.start()  # a security round is always recorded
         return {"ok": True}
 
     @app.post("/api/estop")
