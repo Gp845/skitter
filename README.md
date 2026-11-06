@@ -13,8 +13,9 @@ with its 0G request ID, and the episode can be replayed exactly.
 Built for ETHGlobal Mumbai, 0G track **"Physical AI: Agents with a Body"**. The robot is simulated
 (PyBullet) from the real hexapod's URDF; the same code is meant to drive the physical one.
 
-**Live demo:** https://groundwater-explicit-fate-consequence.trycloudflare.com (sign in with any EVM wallet; each
-account gets its own robot, up to 3 at a time).
+**Live demo:** https://skitter-production.up.railway.app (sign in with any EVM wallet; each account gets its own
+robot; the Railway box runs one robot at a time, so you may be asked to wait a few minutes). The `Dockerfile` is what
+runs there; mount a volume at `/data`.
 
 ## How it works
 
