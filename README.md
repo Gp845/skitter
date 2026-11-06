@@ -13,6 +13,9 @@ with its 0G request ID, and the episode can be replayed exactly.
 Built for ETHGlobal Mumbai, 0G track **"Physical AI: Agents with a Body"**. The robot is simulated
 (PyBullet) from the real hexapod's URDF; the same code is meant to drive the physical one.
 
+**Live demo:** https://groundwater-explicit-fate-consequence.trycloudflare.com (sign in with any EVM wallet; each
+account gets its own robot, up to 3 at a time).
+
 ## How it works
 
 ```
@@ -39,6 +42,24 @@ Built for ETHGlobal Mumbai, 0G track **"Physical AI: Agents with a Body"**. The 
 - **Memory and a map.** Earlier commands (and where Skitter was) are fed back, so "go back" works. Every decision
   reports the objects it sees; Skitter turns those boxes into world positions with its depth camera, so later
   it knows "blue box: 0.6 m, 72° to the left" and turns the short way.
+
+## The house and its map
+
+The sim world is a 100 m² bungalow (living room, dining area, kitchen, hallway, two bedrooms, bathroom) plus a
+west-wing loft 54 cm up: a stair hall with three **narrow flights** (30 cm wide, 3 × 6 cm risers each, 1 m landings)
+leads to a loft study and a playroom. A **16 cm vent** joins bedroom 2 and the bathroom; Skitter walks 16.7 cm tall,
+so a normal walk stops at the mouth and it has to `crawl` (14.9 cm) through.
+
+- **Speed.** "Go faster" / "slow down" maps to `set_speed`, 50-300 % (about 5-30 cm/s; 10 cm/s at 100 %). Above
+  300 % the feet slip and turns overshoot, so that is the cap. Climbing always runs at its own pace.
+- **Explore once, then go anywhere.** Say *"explore"* (or "map the house") and Skitter walks every room on both levels:
+  through the vent, up the three flights, round the loft and back. At each room it takes **one 0G look** (about 10
+  calls for the whole house) and writes `map.json`: places, the walk / crawl / climb links between them, and what it
+  saw in each room. From then on the decision model gets a `go_to` action: *"go check the loft playroom"* is routed
+  over the map (shortest path, crawling and climbing where the links say) by the robot itself, with no model call
+  per step. Each account has its own map, in `accounts/<wallet>/map.json`.
+- Checked by `scripts/test_explore.py` (the full route: 36/36 legs, 10/10 rooms, max tilt 6.4°), `test_stairs.py`
+  (up and down narrow flights, bad stairs refused), `test_vent.py`, `test_speed.py`, `test_map.py` and `test_nav.py`.
 
 ## Surveillance: a tape nobody can edit
 
