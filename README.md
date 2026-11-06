@@ -260,6 +260,11 @@ latest tape. The name belongs to the account's wallet. The robot can only update
 - **Live on `/account`.** The page resolves the name through the Universal Resolver every 20 s. It shows the resolver,
   the `addr` record, the text records, and which keys the robot wallet may set: ✓ for its two keys, ✗ for `avatar` and
   `url`, all read on chain with `hasRoles`.
+- **Audit a robot by name.** `python audit.py home.skitter.eth` resolves the name, takes the root from
+  `skitter.episode`, downloads it from 0G Storage (Merkle proof), checks it is sealed and registered on 0G Chain, and
+  checks that the wallet that registered it is the robot the name's `addr` record points to. For a clip it then
+  checks every frame hash. So the name alone is enough to check a robot's latest tape: no root hash, no trust in
+  the operator.
 
 `node storage/ens.mjs setup | claim <label> <owner> <robot> | record <name> <json> | read <name>`. Checked by
 `python scripts/test_ens.py` (10 checks, live on Sepolia, about 0.001 ETH per run). A fresh account claims a name. The
@@ -311,6 +316,7 @@ Then **End episode + upload to 0G**, and replay it:
 ```bash
 python replay.py --root 0x<rootHash>
 python audit.py 0x<rootHash>     # Storage proof + privacy + Chain entry + 0G receipts + replay
+python audit.py home.skitter.eth # the same, starting from the robot's ENS name (its latest root)
 ```
 
 Tests (no 0G calls, no cost): `python scripts/test_executor.py` (15 safety/behaviour tests),
