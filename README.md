@@ -53,7 +53,7 @@ so a normal walk stops at the mouth and it has to `crawl` (14.9 cm) through.
 
 - **Speed.** "Go faster" / "slow down" maps to `set_speed`, 50-300 % (about 5-30 cm/s; 10 cm/s at 100 %). Above
   300 % the feet slip and turns overshoot, so that is the cap. Climbing always runs at its own pace.
-- **Explore once, then go anywhere.** Say *"explore"* (or "map the house") and **0G decides the whole first patrol**:
+- **Explore once, then go anywhere.** Say *"explore with 0G"* (or "map the house with AI") and **0G decides the whole first patrol**:
   every step it gets the camera frame, the pose, the map so far, the rooms it hasn't seen yet and what the depth
   camera measures about stairs ahead, and picks ONE action (walk, turn, face, approach, look around, crawl, climb, or
   `done`) plus the room it is in and the objects in view. Every action becomes a map node and a walk / crawl / climb
@@ -63,7 +63,7 @@ so a normal walk stops at the mouth and it has to `crawl` (14.9 cm) through.
   own, and from the stair hall it climbed all three narrow flights to the loft with the measured riser / tread /
   width. It has not yet done the whole house in one run, has not found the vent by itself, a cheap model mislabels
   rooms, and `go_to` over a 0G-made map is not reliable yet.
-  *"Guided tour"* is the dependable way to build the map: a fixed route through every room (vent and loft included)
+  Plain *"explore"*, *"map the house"* or *"guided tour"* is the dependable way to build the map: a fixed route through every room (vent and loft included)
   with **one 0G look** per room to name it and list what is there. After either, the decision model gets a `go_to`
   action: *"go check the loft playroom"* is routed
   over the map (shortest path, crawling and climbing where the links say) by the robot itself, with no model call

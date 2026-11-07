@@ -335,7 +335,8 @@ class Runtime:
             return self.tour()  # the fixed route with ~1 0G look per room
         if re.search(r"\bexplore\b|\bmap (the|this|my) (house|home|place)\b", text, re.I) and \
                 not re.search(r"\b(stop|end|cancel)\b", text, re.I):
-            return self.explore()  # 0G decides every move
+            # 0G-driven exploration is experimental, so plain "explore" takes the dependable tour
+            return self.explore() if re.search(r"\b(0g|ai)\b", text, re.I) else self.tour()
         if self.busy:
             self.ex.estop()
         self.q.put(text)
