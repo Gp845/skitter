@@ -70,9 +70,9 @@ rooms have walls all round (door to the stairs x -4.95..-4.05), so nothing up th
    1.4 +-----------+
       -6   -4.5   -3.5  -3   -1  x
 
-ROOMS (with floor z), LEVELS and room_at() name places on both levels. EXPLORE is a route from the spawn
-through every room (the vent, up the loft stairs and back down) for the navigation map; scripts/test_explore.py
-drives it with the real skills.
+ROOMS (with floor z), LEVELS and room_at() name places on both levels. EXPLORE is the "guided tour" route from the
+spawn through every room (the vent, up the loft stairs and back down) for the navigation map; scripts/test_explore.py
+drives it with the real skills ("explore" itself is decided by 0G, see Runtime._explore).
 """
 import math
 

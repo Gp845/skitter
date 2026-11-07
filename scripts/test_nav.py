@@ -1,4 +1,4 @@
-"""Explore the sim house (fallback route = patrol legs) with a fake 0G, then go_to a room via a fake decision. No 0G calls."""
+"""Guided tour of the sim house (fallback route = patrol legs) with a fake 0G, then go_to a room via a fake decision. No 0G calls."""
 import json
 import math
 import os
@@ -51,13 +51,13 @@ rt = Runtime(bot, fake)
 checks = {}
 import cortex.adapters.hexapod_pybullet.house as house  # noqa: E402
 if not hasattr(house, "EXPLORE"):
-    checks["fallback route = patrol waypoints as goto legs"] = rt._explore_route() == [("goto", x, y) for x, y in house.PATROL]
+    checks["fallback route = patrol waypoints as goto legs"] = rt._tour_route() == [("goto", x, y) for x, y in house.PATROL]
 bot.explore_route = [("goto", x, y) for x, y in house.PATROL]  # the CURRENT house's round, whatever EXPLORE becomes
 rt.start()
 t = time.time()
-rt.submit("explore the house")
-end = wait_for(rt, lambda e: e["type"] == "explore" and e["msg"].startswith("exploration ended"), 600)
-print(f"explore: {end and end['msg']} ({time.time() - t:.0f}s)")
+rt.submit("guided tour")
+end = wait_for(rt, lambda e: e["type"] == "explore" and e["msg"].startswith("guided tour ended"), 600)
+print(f"tour: {end and end['msg']} ({time.time() - t:.0f}s)")
 m = HouseMap.load()
 checks["explore ran to the end and saved the map"] = bool(end) and "(done)" in end["msg"] and m is not None
 checks["about one 0G look per room (2 for this 8 m round)"] = len(fake.og.looks) == 2 and "one of: living room" in fake.og.looks[0]

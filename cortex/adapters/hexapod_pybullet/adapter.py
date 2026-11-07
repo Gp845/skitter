@@ -166,10 +166,12 @@ class HexapodAdapter:
         img = self.sensed_bgr if moving and self.t - self.sensed_t <= TRACK_EVERY else self.render()[0]
         return cv2.imencode(".jpg", img)[1].tobytes()
 
-    def find_step(self, max_dist=1.5, down=False):
+    def find_step(self, max_dist=1.5, down=False, size=False):
         """First riser (down: first drop) straight ahead from the depth camera, or None: (distance from body
         centre, riser height, yaw to turn to be square to it [rad, + = left], sideways offset of the stairs'
-        centre line from the body centre, square to the stairs [m, + = left; 0 if wider than the view])."""
+        centre line from the body centre, square to the stairs [m, + = left; 0 if wider than the view]).
+        size=True adds (tread, width) in m and the risers in view (up to 3), each None if not seen (no next
+        riser / wider than the view)."""
         _, depth = self.render()
         feet = min(p.getAABB(self.robot, j)[0][2] for j in range(p.getNumJoints(self.robot))) + 0.004  # AABB margin
         cam_h = self.pose()[0][2] + 0.12 - feet                 # eye above the floor the robot stands on (any level)
@@ -203,7 +205,7 @@ class HexapodAdapter:
             jump, height = edge, max(z for d, z in hits if edge - 0.01 <= d <= edge + 0.06)
         # narrow stairs: both side edges of the first tread in view. Fit its centre line over all the tread's rows:
         # sideways pixels are ~3 mm here, rows ~1 cm, so this beats the edge strips below (1 row = 1.4 deg)
-        line = []
+        line, widths = [], []
         for v, (d, _) in zip(rows, hits):
             if jump + 0.02 <= d <= jump + 0.45:
                 on = np.abs(point(v, depth[v])[1] - (-height if down else height)) < 0.012
@@ -214,10 +216,19 @@ class HexapodAdapter:
                     hi += 1
                 if on[W // 2] and lo > 0 and hi < W - 1:
                     line.append((d, depth[v, W // 2] * (W / 2 - (lo + hi + 1) / 2) / f))
+                    widths.append(depth[v, W // 2] * (hi - lo + 1) / f)
+        # the next riser is seen above the image centre; down, the far edge of each drop hides behind its nosing
+        far = [point(v, float(np.median(depth[v, W // 2 - 20: W // 2 + 20]))) for v in range(H // 4, H // 2)]
+        nxt = [d for d, z in far + hits if d > jump + 0.1 and z - height > 0.01] if not down else []
+        tread = (min(nxt) - jump) if nxt else None
+        steps = 1 + sum(1 for k in (1, 2) if tread and any(z > (k + 0.2) * height and d < jump + k * tread + 0.15
+                                                           for d, z in far + hits)) if tread else None
+        extra = (tread, float(np.median(widths)) if len(widths) >= 5 else None, steps)
         if len(line) >= 5:
             slope, at_centre = np.polyfit(*zip(*line), 1)
             square = math.atan(slope)
-            return edge, height, square, float(at_centre) * math.cos(square)
+            out = edge, height, square, float(at_centre) * math.cos(square)
+            return out + extra if size else out
         square = 0.0
         for off in (W // 5, W // 10):                           # side strips: wide for accuracy, close for narrow stairs
             dl, dr = first(scan(W // 2 - off)), first(scan(W // 2 + off))
@@ -225,7 +236,16 @@ class HexapodAdapter:
                 lat = lambda d: (d - 0.20) * off / f            # strip's sideways offset at that distance
                 square = math.atan2(dr - dl, lat(dr) + lat(dl))
                 break
-        return edge, height, square, 0.0
+        return (edge, height, square, 0.0) + (extra if size else ())
+
+    def clearance(self):
+        """[(bearing deg, + = left, free m from the body centre)] to anything at body height in the left / centre /
+        right third of the view (the rows just above the horizon; the camera looks 7 deg down)."""
+        _, depth = self.render()
+        cols = np.median(depth[80:100], axis=0)
+        f = (H / 2) / math.tan(math.radians(35))
+        return [(round(math.degrees(math.atan((W / 2 - a - W / 6) / f))),
+                 round(float(np.percentile(cols[a: a + W // 3], 10)) + 0.2, 1)) for a in (0, W // 3, 2 * W // 3)]
 
     def locate(self, box):
         _, depth = self.render()

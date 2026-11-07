@@ -53,13 +53,23 @@ so a normal walk stops at the mouth and it has to `crawl` (14.9 cm) through.
 
 - **Speed.** "Go faster" / "slow down" maps to `set_speed`, 50-300 % (about 5-30 cm/s; 10 cm/s at 100 %). Above
   300 % the feet slip and turns overshoot, so that is the cap. Climbing always runs at its own pace.
-- **Explore once, then go anywhere.** Say *"explore"* (or "map the house") and Skitter walks every room on both levels:
-  through the vent, up the three flights, round the loft and back. At each room it takes **one 0G look** (about 10
-  calls for the whole house) and writes `map.json`: places, the walk / crawl / climb links between them, and what it
-  saw in each room. From then on the decision model gets a `go_to` action: *"go check the loft playroom"* is routed
+- **Explore once, then go anywhere.** Say *"explore"* (or "map the house") and **0G decides the whole first patrol**:
+  every step it gets the camera frame, the pose, the map so far, the rooms it hasn't seen yet and what the depth
+  camera measures about stairs ahead, and picks ONE action (walk, turn, face, approach, look around, crawl, climb, or
+  `done`) plus the room it is in and the objects in view. Every action becomes a map node and a walk / crawl / climb
+  link in `map.json` (`EXPLORE_MAX_DECISIONS`, default 150; any 0G failure or invalid call stops the robot; walking
+  toward a sensed drop is refused).
+  **Status, honestly:** this is experimental. In real 0G runs it went living room, dining, hallway, stair hall on its
+  own, and from the stair hall it climbed all three narrow flights to the loft with the measured riser / tread /
+  width. It has not yet done the whole house in one run, has not found the vent by itself, a cheap model mislabels
+  rooms, and `go_to` over a 0G-made map is not reliable yet.
+  *"Guided tour"* is the dependable way to build the map: a fixed route through every room (vent and loft included)
+  with **one 0G look** per room to name it and list what is there. After either, the decision model gets a `go_to`
+  action: *"go check the loft playroom"* is routed
   over the map (shortest path, crawling and climbing where the links say) by the robot itself, with no model call
   per step. Each account has its own map, in `accounts/<wallet>/map.json`.
-- Checked by `scripts/test_explore.py` (the full route: 36/36 legs, 10/10 rooms, max tilt 6.4°), `test_stairs.py`
+- Checked by `scripts/test_explore_ai.py` (real 0G exploration, then `go_to` over its map),
+  `scripts/test_explore.py` (the tour route: 36/36 legs, 10/10 rooms, max tilt 6.4°), `test_stairs.py`
   (up and down narrow flights, bad stairs refused), `test_vent.py`, `test_speed.py`, `test_map.py` and `test_nav.py`.
 
 ## Surveillance: a tape nobody can edit

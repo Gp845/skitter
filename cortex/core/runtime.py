@@ -1,6 +1,7 @@
 """Owns the robot/sim thread. All adapter calls (stepping, camera) happen on this one thread."""
 import json
 import math
+import os
 import queue
 import re
 import threading
@@ -9,15 +10,35 @@ from collections import deque
 
 from .executor import Executor
 from .house_map import HouseMap
+from .og_client import OGError
+from .planner import EXPLORE_ACTIONS
+from .safety import Reject, validate
 
 PATROL = object()   # queue marker: run the security round instead of a spoken task
-EXPLORE = object()  # queue marker: map the house
+EXPLORE = object()  # queue marker: map the house, 0G deciding every move
+TOUR = object()     # queue marker: map the house along the world's fixed route
 ROOM_EVERY_M = 2.5  # ask 0G "which room is this" again after walking this far (or after stairs / a vent)
 ROOM_Q = ('This is the low front camera of a small robot mapping a house. Reply with JSON only, no prose: '
           '{{"room": "<the room the robot is standing in{rooms}; judge by the floor and furniture around it, not by '
           'a room seen through a doorway>", "objects": [{{"label": "<short name, e.g. red sofa>", '
           '"x1": 0, "y1": 0, "x2": 0, "y2": 0}}]}} listing up to 8 distinct pieces of furniture or objects in view, '
           'boxes in 0-1000 image coordinates (x to the right, y down, origin top-left).')
+
+
+def _mismatch(args, s):
+    """Why a model's climb doesn't fit the stairs the depth camera measured from where it stands ("" = fits)."""
+    if not isinstance(s, dict):
+        return "no stairs measured straight ahead: face them square-on 0.6-0.8 m before the first riser"
+    if abs(s["stairs_centre_left_cm"]) > 10:
+        side = "left" if s["stairs_centre_left_cm"] > 0 else "right"
+        return f"off_centre: the stairs' centre is {abs(s['stairs_centre_left_cm'])} cm to the {side}; line up first"
+    if isinstance(s["width_cm"], int) and args["width_cm"] > s["width_cm"] + 15:
+        return f"width_mismatch (measured {s['width_cm']} cm)"
+    if isinstance(s["tread_cm"], int) and abs(args["tread_cm"] - s["tread_cm"]) > 8:
+        return f"tread_mismatch (measured {s['tread_cm']} cm)"
+    if isinstance(s["risers_in_view"], int) and args["steps"] < s["risers_in_view"]:
+        return f"steps_mismatch (counted {s['risers_in_view']} risers to the landing)"
+    return ""
 
 
 class Runtime:
@@ -93,13 +114,27 @@ class Runtime:
         self.emit({"t": time.time(), "type": "patrol", "msg": f"patrol stopped: {why}"})
 
     def explore(self):
-        """Walk the world's exploration legs once, asking 0G about one question per room; saves the house map."""
+        """First patrol: 0G decides every move until the whole house is mapped; saves the house map."""
         if self.busy:
             self.ex.estop()
         self.q.put(EXPLORE)
         self.on_patrol()  # mapping the house is recorded the same way as a patrol
 
-    def _explore_route(self):
+    def tour(self):
+        """Walk the world's fixed tour legs once, asking 0G about one question per room; saves the house map."""
+        if self.busy:
+            self.ex.estop()
+        self.q.put(TOUR)
+        self.on_patrol()
+
+    def _rooms(self):
+        rooms = list(getattr(self.adapter, "rooms", None) or [])
+        if not rooms and getattr(self.adapter, "world", None) == "house":
+            from ..adapters.hexapod_pybullet.house import ROOMS
+            rooms = list(ROOMS)
+        return rooms
+
+    def _tour_route(self):
         legs = getattr(self.adapter, "explore_route", None)
         if not legs and getattr(self.adapter, "world", None) == "house":
             try:
@@ -126,18 +161,15 @@ class Runtime:
                    "msg": f"0G: this is the {room or '?'}; sees {', '.join(str(o.get('label')) for o in objs) or 'nothing'}"})
         return room, objs
 
-    def _explore(self):
-        legs = self._explore_route()
+    def _tour(self):
+        legs = self._tour_route()
         if not legs:
-            self.emit({"t": time.time(), "type": "explore", "msg": "no exploration route for this world"})
+            self.emit({"t": time.time(), "type": "explore", "msg": "no tour route for this world"})
             return
-        rooms = list(getattr(self.adapter, "rooms", None) or [])
-        if not rooms and getattr(self.adapter, "world", None) == "house":
-            from ..adapters.hexapod_pybullet.house import ROOMS
-            rooms = list(ROOMS)
+        rooms = self._rooms()
         self.ex._estop.clear()
         self.ex.state = "EXPLORE"
-        self.emit({"t": time.time(), "type": "explore", "msg": f"exploring: {len(legs)} legs"})
+        self.emit({"t": time.time(), "type": "explore", "msg": f"guided tour: {len(legs)} legs"})
         m = self.ex.map = HouseMap()
         st = self.adapter.state()
         level, room, asked, why = 0, None, None, "done"
@@ -175,16 +207,135 @@ class Runtime:
                 m.save()
         m.save()
         self.ex.state = "IDLE"
-        self.emit({"t": time.time(), "type": "explore", "msg": f"exploration ended ({why}): {len(m.nodes)} places, "
+        self.emit({"t": time.time(), "type": "explore", "msg": f"guided tour ended ({why}): {len(m.nodes)} places, "
                    f"rooms {', '.join(m.rooms()) or 'none'}, {len(m.objects)} objects; map saved to {m.path}"})
+
+    def _sensed(self):
+        """What the depth camera says about stairs straight ahead (up) and a drop (down), for the model."""
+        out = {}
+        for key, down in (("step_ahead", False), ("drop_ahead", True)):
+            try:
+                f = self.adapter.find_step(down=down, size=True)
+            except Exception:  # no depth stair sensing on this robot
+                f = None
+            out[key] = "none" if f is None or abs(f[1]) > 0.075 else {  # higher: a wall or furniture, not a step
+                "distance_m": round(f[0], 2), "riser_cm": round(abs(f[1]) * 100, 1),
+                "tread_cm": round(f[4] * 100) if f[4] else "not in view",
+                "width_cm": round(f[5] * 100) if f[5] else "wider than the view",
+                "risers_in_view": f[6] or "not measured",
+                "turn_to_square_deg": round(math.degrees(f[2]), 1), "stairs_centre_left_cm": round(f[3] * 100, 1)}
+        return out
+
+    def _free(self, m, here, free, st):
+        """Free distance by world heading (30 deg bins) at map node `here`, from every look taken there; a heading
+        that leads to an already mapped place within that distance is marked 'been there'."""
+        for bearing, dist in (self.adapter.clearance() if hasattr(self.adapter, "clearance") else []):
+            free.setdefault(here, {})[round((math.degrees(st["yaw"]) + bearing) / 30) * 30 % 360] = dist
+        a, out = m.nodes[here], {}
+        for h, dist in sorted(free.get(here, {}).items()):
+            been = any(0.5 < math.hypot(n["x"] - a["x"], n["y"] - a["y"]) < dist + 0.5 and n["level"] == a["level"] and
+                       abs((math.degrees(math.atan2(n["y"] - a["y"], n["x"] - a["x"])) - h + 180) % 360 - 180) < 20
+                       for n in m.nodes.values())
+            out[str(h)] = f"{dist} m" + (" (been there)" if been else "")
+        return out
+
+    def _explore(self):
+        rooms, cap = self._rooms(), int(os.environ.get("EXPLORE_MAX_DECISIONS", "150"))
+        names = {a["name"]: a for a in self.adapter.manifest()["actions"]}
+        manifest = {**self.adapter.manifest(), "actions": [names[a] for a in EXPLORE_ACTIONS if a in names]}
+        self.ex._estop.clear()
+        self.ex.state = "EXPLORE"
+        self.emit({"t": time.time(), "type": "explore", "msg": f"exploring with 0G deciding (up to {cap} decisions)"})
+        m = self.ex.map = HouseMap()
+        st = self.adapter.state()
+        z0, level, history, free, why = st.get("z", 0), 0, [], {}, f"decision cap ({cap})"
+        prev = m.add_node(st["x"], st["y"], st.get("z", 0), level)
+        for n in range(1, cap + 1):
+            if self.ex._estop.is_set():
+                why = "stopped by E-STOP or a new command"
+                break
+            frame, st = self.adapter.get_frame(), self.adapter.state()
+            named = m.rooms()
+            state = {"x": round(st["x"], 2), "y": round(st["y"], 2), "heading_deg": round(math.degrees(st["yaw"])),
+                     "floor_height_cm": round((st.get("z", z0) - z0) * 100), "level": level,
+                     "speed_percent": st.get("speed_percent"), **self._sensed(),
+                     "free_m_by_heading_here": self._free(m, prev, free, st),
+                     "rooms_seen": {r: [m.nodes[k]["x"], m.nodes[k]["y"], m.nodes[k]["level"]] for r, k in named.items()},
+                     "rooms_not_seen_yet": [r for r in rooms if r not in named],
+                     "places_mapped": len(m.nodes), "legs_mapped": len(m.edges),
+                     "climbs_done": [{k: v for k, v in e["params"].items() if k != "yaw"} for e in m.edges if e["how"] == "climb"],
+                     "trail": [[v["x"], v["y"], v["level"], v["room"] or "?"] for v in list(m.nodes.values())[-12:]]}
+            try:
+                d = self.planner.explore(frame, state, history, rooms)
+            except OGError as e:
+                self.ex._safe_stop(f"0G unavailable: {e}")
+                why = "0G unavailable"
+                break
+            except Exception as e:
+                self.ex._safe_stop(f"decision error: {e}")
+                why = "decision error"
+                break
+            plan = str(d.args.pop("plan", "") or "")[:120]
+            self.emit({"t": time.time(), "type": "explore", "frame": frame, "request_id": d.request_id,
+                       "msg": f"0G #{n}: {d.name} {json.dumps(d.args)} (in the {d.room or '?'}) {plan}"})
+            if d.room in rooms:  # the frame was taken here, before the move
+                m.nodes[prev]["room"] = d.room
+            self.ex._map(d.seen, session=False)
+            if d.name == "done":
+                why = f"0G: done ({str(d.args.get('reason', ''))[:80]})"
+                break
+            try:
+                name, args = validate(manifest, d.name, d.args)
+            except Reject as e:
+                self.ex._safe_stop(f"rejected model output: {e}")
+                why = "rejected model output"
+                break
+            drop = state["drop_ahead"]
+            unfit = _mismatch(args, drop if args.get("direction") == "down" else state["step_ahead"]) if name == "climb" else ""
+            if (name == "approach" or name in ("walk", "crawl") and args["direction"] == "forward") and \
+                    isinstance(drop, dict) and drop["distance_m"] < args.get("distance_cm", 150) / 100 + 0.3:
+                res = f"refused: stairs going down {drop['distance_m']} m ahead (walking would fall); climb down instead"
+            elif unfit:
+                res = f"refused: {unfit}"
+            elif name == "climb":
+                params = {"yaw": round(st["yaw"], 3), **args}
+                res = self.ex.climb(params)
+            else:
+                self.adapter.execute(name, args, names[name].get("timeout_s", 30))
+                res = self.ex.wait(names[name].get("timeout_s", 30))
+                res = self.adapter.result() if res == "done" else res
+            history.append(f"{name} {json.dumps(args)} ({plan}) => {res}")
+            if res == "robot fell":
+                self.ex._safe_stop("robot fell / out of safe tilt")
+            if res in ("robot fell", "stopped by E-STOP or a new command"):
+                why = res
+                break
+            if res in ("stuck", "unstable") and abs(self.adapter.state()["z"] - m.nodes[prev]["z"]) > 0.03:
+                # left part-way up the stairs: the map can't link this place
+                self.ex._safe_stop(f"climb {res}")
+                why = f"climb {res}"
+                break
+            how = "climb" if name == "climb" and res == "reached" else "crawl" if name == "crawl" else "walk"
+            if how == "climb":
+                level += 1 if args["direction"] == "up" else -1
+            st = self.adapter.state()
+            prev = m.add_node(st["x"], st["y"], st.get("z", 0), level, None, prev, how, params if how == "climb" else None)
+            m.save()
+        m.save()
+        self.ex.state = "IDLE" if self.ex.state != "SAFE_STOP" else self.ex.state
+        self.emit({"t": time.time(), "type": "explore", "msg": f"exploration ended ({why}) after {n} decisions: "
+                   f"{len(m.nodes)} places, {len(m.edges)} legs, rooms {', '.join(m.rooms()) or 'none'}, "
+                   f"{len(m.objects)} objects; map saved to {m.path}"})
 
     def submit(self, text):
         """New command interrupts the current task (the old one stops, then this one runs)."""
         if re.search(r"\bpatrol\b", text, re.I) and not re.search(r"\b(stop|end|cancel)\b", text, re.I):
             return self.patrol()  # a fixed round: no model needed
+        if re.search(r"\b(guided )?tour\b", text, re.I) and not re.search(r"\b(stop|end|cancel)\b", text, re.I):
+            return self.tour()  # the fixed route with ~1 0G look per room
         if re.search(r"\bexplore\b|\bmap (the|this|my) (house|home|place)\b", text, re.I) and \
                 not re.search(r"\b(stop|end|cancel)\b", text, re.I):
-            return self.explore()  # a fixed route with ~1 0G look per room, not a decision loop
+            return self.explore()  # 0G decides every move
         if self.busy:
             self.ex.estop()
         self.q.put(text)
@@ -210,7 +361,14 @@ class Runtime:
                 continue
             self.busy = True
             try:
-                self._patrol() if text is PATROL else self._explore() if text is EXPLORE else self.ex.run_task(text)
+                if text is PATROL:
+                    self._patrol()
+                elif text is EXPLORE:
+                    self._explore()
+                elif text is TOUR:
+                    self._tour()
+                else:
+                    self.ex.run_task(text)
             except Exception as e:  # never let a bug leave the robot moving
                 self.adapter.stop()
                 self.emit({"t": time.time(), "type": "safe_stop", "reason": f"runtime error: {e}"})

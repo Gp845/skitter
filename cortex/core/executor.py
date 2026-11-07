@@ -162,9 +162,12 @@ class Executor:
         legs = self.map.route(st["x"], st["y"], st.get("z", 0), place) if self.map else None
         if legs is None:
             return "no_route"
-        for how, k, params in legs:
+        for i, (how, k, params) in enumerate(legs):
             res = self.climb(params) if how == "climb" else self.drive_to(self.map.nodes[k]["x"], self.map.nodes[k]["y"], how=how)
-            if res != "reached":
+            st = self.adapter.state()
+            # explored places can sit against a wall: coming from another side, the block reflex stops short of them
+            near = math.hypot(st["x"] - self.map.nodes[k]["x"], st["y"] - self.map.nodes[k]["y"]) < 0.5
+            if res != "reached" and not (res == "blocked" and near and i < len(legs) - 1 and legs[i + 1][0] != "climb"):
                 return res
         return "reached"
 
